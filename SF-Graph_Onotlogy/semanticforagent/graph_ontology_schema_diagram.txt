@@ -1,0 +1,211 @@
+# Graph Ontology Schema Relationship Diagram
+
+## Overview Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         GRAPH DATA LAYER (80M+ rows)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌──────────────────────────┐              ┌──────────────────────────┐   │
+│   │      KG_NODE             │              │      KG_EDGE             │   │
+│   │   (80M rows, 1.7GB)      │              │   (46M rows, 863MB)      │   │
+│   ├──────────────────────────┤              ├──────────────────────────┤   │
+│   │ ✓ NODE_ID (PK)           │◄────────────►│ ✓ EDGE_ID (PK)           │   │
+│   │ ✓ NODE_TYPE              │◄─┐      ┌───│ ✓ SRC_ID (FK)            │   │
+│   │   NAME                   │  │      │   │ ✓ DST_ID (FK)            │   │
+│   │   PROPS (VARIANT)        │  │      │   │ ✓ EDGE_TYPE              │◄┐ │
+│   │   TS_INGESTED            │  │      │   │   EFFECTIVE_START        │ │ │
+│   ├──────────────────────────┤  │      │   │   EFFECTIVE_END          │ │ │
+│   │ Clustered: NODE_TYPE     │  │      │   │   PROPS (VARIANT)        │ │ │
+│   │ Auto-clustering: ON      │  │      │   │   WEIGHT                 │ │ │
+│   └──────────────────────────┘  │      │   ├──────────────────────────┤ │ │
+│                                  │      │   │ Clustered: (SRC_ID,      │ │ │
+│                                  │      │   │            DST_ID)       │ │ │
+│                                  │      │   │ Auto-clustering: ON      │ │ │
+│                                  │      │   └──────────────────────────┘ │ │
+│                                  │      │                                │ │
+└──────────────────────────────────┼──────┼────────────────────────────────┼─┘
+                                   │      │                                │
+                                   │      │                                │
+┌──────────────────────────────────┼──────┼────────────────────────────────┼─┐
+│                       ONTOLOGY METADATA LAYER (~90 rows)                 │ │
+├──────────────────────────────────────────────────────────────────────────┼─┤
+│                                  │      │                                │ │
+│  CLASS DEFINITIONS               │      │    RELATIONSHIP DEFINITIONS    │ │
+│  ┌────────────────────────┐      │      │    ┌────────────────────────┐ │ │
+│  │  ONT_CLASS (9 rows)    │      │      │    │ ONT_RELATION_DEF       │ │ │
+│  │  ⚡ SEARCH OPT         │      │      │    │ (4 rows)               │ │ │
+│  ├────────────────────────┤      │      │    │ ⚡ SEARCH OPT          │ │ │
+│  │ ✓ CLASS_NAME (PK)      │──┐   │      │    ├────────────────────────┤ │ │
+│  │   PARENT_CLASS_NAME    │  │   │      │    │ ✓ REL_NAME (PK)        │─┼─┤
+│  │   IS_ABSTRACT          │  │   │      │    │   DOMAIN_CLASS (FK) ◄──┤ │ │
+│  │   DESCRIPTION          │  │   │      │    │   RANGE_CLASS (FK) ◄───┤ │ │
+│  │   TYPE_CLASS           │  │   │      │    │   CARDINALITY          │ │ │
+│  └────────────────────────┘  │   │      │    │   INVERSE_REL_NAME     │ │ │
+│           │                   │   │      │    │   DESCRIPTION          │ │ │
+│           │                   │   │      │    └────────────────────────┘ │ │
+│           ▼                   │   │      │             │                 │ │
+│  ┌────────────────────────┐  │   │      │             ▼                 │ │
+│  │ ONT_CLASS_MAP (4 rows) │  │   │      │    ┌────────────────────────┐ │ │
+│  │ 🔥 SEARCH OPT          │  │   │      │    │ ONT_REL_MAP (4 rows)   │ │ │
+│  ├────────────────────────┤  │   │      │    │ 🔥 SEARCH OPT          │ │ │
+│  │ ✓ CLASS_NAME (FK) ◄────┼──┘   │      │    ├────────────────────────┤ │ │
+│  │   CONCRETE_VIEW        │      │      │    │ ✓ REL_NAME (FK) ◄──────┼─┘ │
+│  │   ID_COL               │      │      │    │   CONCRETE_VIEW        │   │
+│  │ ✓ SUBTYPE_VALUE ───────┼──────┘      │    │   SRC_COL              │   │
+│  │   (→ NODE_TYPE)        │             │    │   DST_COL              │   │
+│  └────────────────────────┘             │    │ ✓ VIA_REL_VALUE ───────┼───┘
+│                                          │    │   (→ EDGE_TYPE)        │
+│                                          │    └────────────────────────┘
+│                                          │
+│  PROPERTY DEFINITIONS                    │
+│  ┌─────────────────────────────────┐    │
+│  │ ONT_PROPERTY (28 rows)          │    │
+│  │ 🔥 SEARCH OPT                   │    │
+│  ├─────────────────────────────────┤    │
+│  │ ✓ CLASS_NAME (FK) ◄─────────────┼────┘
+│  │ ✓ PROP_NAME                     │
+│  │   DATA_TYPE                     │
+│  │ ✓ SHARED_PROP_NAME (FK)         │──┐
+│  │   IS_REQUIRED                   │  │
+│  │   IS_INDEXED                    │  │
+│  │   DESCRIPTION                   │  │
+│  └─────────────────────────────────┘  │
+│                                        │
+│  ┌─────────────────────────────────┐  │
+│  │ ONT_SHARED_PROPERTY (5 rows)    │  │
+│  │ ⚡ SEARCH OPT                   │  │
+│  ├─────────────────────────────────┤  │
+│  │ ✓ SHARED_PROP_NAME (PK) ◄───────┼──┘
+│  │   BASE_TYPE                     │
+│  │   DESCRIPTION                   │
+│  │   DEFAULT_FORMAT                │
+│  └─────────────────────────────────┘
+│
+│  INTERFACE DEFINITIONS
+│  ┌─────────────────────────────────┐
+│  │ ONT_INTERFACE (3 rows)          │
+│  │ 📊 SEARCH OPT                   │
+│  ├─────────────────────────────────┤
+│  │ ✓ INTERFACE_NAME (PK)           │──┐
+│  │   DESCRIPTION                   │  │
+│  └─────────────────────────────────┘  │
+│           │                            │
+│           ▼                            │
+│  ┌─────────────────────────────────┐  │
+│  │ ONT_INTERFACE_IMPL (7 rows)     │  │
+│  │ ⚡ SEARCH OPT                   │  │
+│  ├─────────────────────────────────┤  │
+│  │ ✓ INTERFACE_NAME (FK) ◄─────────┼──┘
+│  │ ✓ CLASS_NAME (FK)               │
+│  └─────────────────────────────────┘
+│
+│  DATA SOURCE MAPPINGS (ETL Layer)
+│  ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│  │ ONT_OBJECT_SOURCE (4 rows)      │    │ ONT_LINK_SOURCE (3 rows)        │
+│  │ ⚡ SEARCH OPT                   │    │ ⚡ SEARCH OPT                   │
+│  ├─────────────────────────────────┤    ├─────────────────────────────────┤
+│  │ ✓ OBJ_TYPE                      │    │ ✓ LINK_TYPE                     │
+│  │ ✓ SOURCE_TABLE                  │    │ ✓ SOURCE_TABLE                  │
+│  │   FILTER_SQL                    │    │   FILTER_SQL                    │
+│  │   MAPPING (VARIANT)             │    │   MAPPING (VARIANT)             │
+│  │   → Feeds KG_NODE               │    │   → Feeds KG_EDGE               │
+│  └─────────────────────────────────┘    └─────────────────────────────────┘
+│
+│  SECURITY & PERMISSIONS
+│  ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│  │ ONT_PERMISSION (17 rows)        │    │ ONT_ROLE (4 rows)               │
+│  │ ⚡ SEARCH OPT                   │    │ 📊 SEARCH OPT                   │
+│  ├─────────────────────────────────┤    ├─────────────────────────────────┤
+│  │ ✓ SUBJECT_NAME                  │    │ ✓ ONT_ROLE_NAME (PK) ───────────┼──┐
+│  │ ✓ ONT_ROLE_NAME (FK) ───────────┼────┘   DESCRIPTION                   │  │
+│  │ ✓ SUBJECT_KIND                  │    └─────────────────────────────────┘  │
+│  │   PRIVILEGE                     │                                         │
+│  └─────────────────────────────────┘    ┌─────────────────────────────────┐  │
+│                                          │ ONT_ROLE_BINDING (0 rows)       │  │
+│                                          │ 📊 Future: SEARCH OPT           │  │
+│                                          ├─────────────────────────────────┤  │
+│                                          │ ✓ ONT_ROLE_NAME (FK) ◄──────────┼──┘
+│                                          │ ✓ SNOWFLAKE_ROLE                │
+│                                          │   → Maps to Snowflake roles     │
+│                                          └─────────────────────────────────┘
+│
+│  INFERENCE & RULES
+│  ┌─────────────────────────────────┐    ┌─────────────────────────────────┐
+│  │ ONT_RULE (4 rows)               │    │ ONT_FUNCTION (2 rows)           │
+│  │ 📊 SEARCH OPT                   │    │ 📊 SEARCH OPT                   │
+│  ├─────────────────────────────────┤    ├─────────────────────────────────┤
+│  │ ✓ TARGET_REL                    │    │ ✓ FUNCTION_NAME (PK)            │──┐
+│  │ ✓ SOURCE_REL_1                  │    │   LANGUAGE                      │  │
+│  │ ✓ SOURCE_REL_2                  │    │   SNOWFLAKE_REF                 │  │
+│  │   RULE_KIND                     │    │   INPUT_SCHEMA (VARIANT)        │  │
+│  │   IS_ENABLED                    │    │   OUTPUT_SCHEMA (VARIANT)       │  │
+│  └─────────────────────────────────┘    └─────────────────────────────────┘  │
+│                                                                               │
+│  ┌─────────────────────────────────┐    ┌─────────────────────────────────┐  │
+│  │ ONT_DERIVED_PROPERTY (0 rows)   │    │ ONT_FUNCTION_BINDING (2 rows)   │  │
+│  │ 📊 Future: SEARCH OPT           │    │ 📊 SEARCH OPT                   │  │
+│  ├─────────────────────────────────┤    ├─────────────────────────────────┤  │
+│  │ ✓ CLASS_NAME                    │    │ ✓ FUNCTION_NAME (FK) ◄──────────┼──┘
+│  │ ✓ PROP_NAME                     │    │ ✓ BOUND_TO_NAME                 │
+│  │   DEFINITION_KIND               │    │   BOUND_TO_KIND                 │
+│  │   SQL_EXPR                      │    │   → Binds to class/relation     │
+│  │   FUNCTION_NAME (FK)            │    └─────────────────────────────────┘
+│  └─────────────────────────────────┘
+│
+│  DATA QUALITY
+│  ┌─────────────────────────────────┐
+│  │ ONT_CONSTRAINT_VIOLATION        │
+│  │ (0 rows)                        │
+│  │ 📊 Future: CLUSTERING +         │
+│  │            SEARCH OPT           │
+│  ├─────────────────────────────────┤
+│  │ ✓ VIOLATION_ID (PK)             │
+│  │   CHECK_NAME                    │
+│  │   REL_OR_CLASS                  │
+│  │   SRC_ID (FK → KG_NODE)         │
+│  │   DST_ID (FK → KG_NODE)         │
+│  │   OBSERVED_AT                   │
+│  │   → Logs ontology violations    │
+│  └─────────────────────────────────┘
+│
+│  ROOT METADATA
+│  ┌─────────────────────────────────┐
+│  │ ONT_ONTOLOGY (1 row)            │
+│  │ ⛔ No optimization (singleton)  │
+│  ├─────────────────────────────────┤
+│  │ ✓ ONTOLOGY_NAME (PK)            │
+│  │   VERSION                       │
+│  │   DEFAULT_SCHEMA                │
+│  │   CREATED_BY                    │
+│  │   IS_ACTIVE                     │
+│  │   → Root metadata for all       │
+│  └─────────────────────────────────┘
+│
+│  HIERARCHICAL VIEW
+│  ┌─────────────────────────────────┐
+│  │ ONT_CLASS_CLOSURE (VIEW)        │
+│  │ ⛔ Keep as view (recursive CTE) │
+│  ├─────────────────────────────────┤
+│  │   ANCESTOR_CLASS                │
+│  │   DESCENDANT_CLASS              │
+│  │   DEPTH                         │
+│  │   → Class hierarchy closure     │
+│  └─────────────────────────────────┘
+│
+└───────────────────────────────────────────────────────────────────────────┘
+
+Legend:
+  🔥 = HIGH PRIORITY - Execute immediately (critical join bridges)
+  ⚡ = MEDIUM PRIORITY - Execute soon (security, ETL, inheritance)
+  📊 = LOW PRIORITY - Optional (very small tables)
+  ⛔ = NO OPTIMIZATION NEEDED (too small or view)
+  ✓ = Key column (PK, FK, or heavily filtered/joined)
+  (FK) = Foreign Key
+  (PK) = Primary Key
+
+Join Patterns:
+  ──► Direct foreign key relationship
+  ──┐ Self-referencing relationship
+  └─┘ Circular reference

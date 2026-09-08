@@ -1,0 +1,251 @@
+create or replace semantic view A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.GRAPHSEMANTICS
+	tables (
+		A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.FAN_IN_DETECTION_RESULTS comment='The table contains results from fan-in pattern detection analysis used to identify potential financial crime risks within a graph structure. Each record represents a destination node that has been flagged based on the number and characteristics of incoming connections from source nodes, including aggregated metrics and temporal patterns. Records include risk assessments, detection parameters used, and statistical summaries of the connections identified during each detection run.',
+		A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.FAN_OUT_DETECTION_RESULTS comment='The table contains results from graph analysis identifying potential suspicious activity patterns based on connection behavior. Each record represents a node in a network graph and includes metrics about its outgoing and incoming connections, along with risk assessments and flags indicating anomalous fan-out patterns.',
+		A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.GRAPH_ADJACENCY_FULL comment='The table contains records of nodes within a graph structure and their connectivity relationships. Each record represents a single node and includes information about its incoming and outgoing connections, including the neighboring nodes, connection counts, and associated weights.',
+		A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.KG_EDGE primary key (EDGE_ID) comment='The table contains relationships between entities in a knowledge graph structure. Each record represents a directed connection from a source entity to a destination entity, including relationship type, strength weighting, and temporal validity periods.',
+		A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.KG_NODE primary key (NODE_ID) comment='The table contains records of entities within a graph structure used for financial crime analysis. Each record represents a node of various types including customers, accounts, transactions, and devices, along with their associated properties and ingestion timestamps.',
+		A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.SHARED_DEVICE_NETWORK_RESULTS comment='The table contains records of devices and their associated networks identified through shared usage patterns. Each record represents a device within a network cluster, including information about the associated customer, network characteristics such as size and number of shared users, and risk assessment metrics.'
+	)
+	facts (
+		FAN_IN_DETECTION_RESULTS.RISK_SCORE as RISK_SCORE comment='Risk score assigned to detected fan-in patterns for financial crime monitoring purposes.' sample_values ('6363349.5', '6364159', '6148649.5'),
+		FAN_IN_DETECTION_RESULTS.TOTAL_WEIGHT as TOTAL_WEIGHT comment='The total weight of the fan-in detection pattern measured as a numerical value.' sample_values ('8.35', '347112.9', '347134.8'),
+		FAN_OUT_DETECTION_RESULTS.FAN_OUT_IN_RATIO as FAN_OUT_IN_RATIO comment='The ratio of fan-out to fan-in connections for the entity in the graph analysis.' sample_values ('3.67', '12.5', '96'),
+		SHARED_DEVICE_NETWORK_RESULTS.RISK_SCORE as RISK_SCORE comment='A numerical score indicating the level of risk associated with shared device network activity.' sample_values ('688.89', '713.33', '671.43')
+	)
+	dimensions (
+		FAN_IN_DETECTION_RESULTS.DETECTION_RUN_ID as DETECTION_RUN_ID comment='Unique identifier for each execution of the fan-in detection process.' sample_values ('FAN_IN_20260707122905651000', 'FAN_IN_20260707122942350000', 'FAN_IN_20260706205000287000'),
+		FAN_IN_DETECTION_RESULTS.DISTINCT_SRC_NODES as DISTINCT_SRC_NODES comment='Unique source nodes identified in the fan-in detection pattern representing customers or transactions that are part of the detected network structure.' sample_values ('[
+  "TXN00032245",
+  "TXN00070944"
+]', '[
+  "CUST00008764",
+  "CUST00048401"
+]', '[
+  "CUST00029826",
+  "CUST00050657"
+]'),
+		FAN_IN_DETECTION_RESULTS.DST_NODE_ID as DST_NODE_ID comment='Destination node identifier in the graph representing the target entity in a fan-in detection pattern.' sample_values ('CUST018173', 'ACCT00079714', 'CUST00094753'),
+		FAN_IN_DETECTION_RESULTS.DST_NODE_NAME as DST_NODE_NAME comment='The name of the destination node in the graph representing various entity types such as merchants, accounts, and devices.' sample_values ('Investment Account - 16978', 'Business Account - 54396', 'Business Account #7185520'),
+		FAN_IN_DETECTION_RESULTS.DST_NODE_TYPE as DST_NODE_TYPE comment='The type of destination node in the graph representing entities such as merchants, devices, accounts, customers, or addresses.' sample_values ('Merchant', 'Address', 'Device'),
+		FAN_IN_DETECTION_RESULTS.EDGE_TYPES as EDGE_TYPES comment='The types of edges or relationships between entities in the graph used for fan-in pattern detection in financial crime analysis.' sample_values ('[
+  "USED_DEVICE",
+  "USES_DEVICE"
+]', '[
+  "FROM_ACCOUNT",
+  "LINKED_TO",
+  "OWNS"
+]', '[
+  "FROM_ACCOUNT",
+  "TO_ACCOUNT"
+]'),
+		FAN_IN_DETECTION_RESULTS.FAN_IN_COUNT as FAN_IN_COUNT comment='The number of incoming connections or entities converging into a single node in the financial crime detection graph.' sample_values ('6', '9', '10'),
+		FAN_IN_DETECTION_RESULTS.PARAM_EDGE_TYPE as PARAM_EDGE_TYPE comment='The type of edge parameter used in the fan-in detection analysis.',
+		FAN_IN_DETECTION_RESULTS.PARAM_MIN_FAN_IN_THRESHOLD as PARAM_MIN_FAN_IN_THRESHOLD comment='The minimum threshold value for detecting fan-in patterns in the financial crime detection algorithm.' sample_values ('2', '5', '3'),
+		FAN_IN_DETECTION_RESULTS.PARAM_NODE_TYPE as PARAM_NODE_TYPE comment='The type of node used as a parameter in the fan-in detection analysis.',
+		FAN_IN_DETECTION_RESULTS.PARAM_TIME_WINDOW_DAYS as PARAM_TIME_WINDOW_DAYS comment='The time window parameter measured in days used for the fan-in detection algorithm.',
+		FAN_IN_DETECTION_RESULTS.DETECTION_TIMESTAMP as DETECTION_TIMESTAMP comment='The timestamp when the fan-in pattern was detected in the financial crime monitoring system.' sample_values ('2026-07-07T12:29:42.379Z', '2026-07-07T12:29:29.012Z', '2026-07-06T20:50:00.314Z'),
+		FAN_IN_DETECTION_RESULTS.FIRST_SEEN as FIRST_SEEN comment='The earliest date when the entity or pattern was first observed or detected in the system.' sample_values ('2023-08-15', '2023-11-15', '2024-01-05'),
+		FAN_IN_DETECTION_RESULTS.LAST_SEEN as LAST_SEEN comment='The most recent date when the entity or pattern was observed in the detection system.' sample_values ('2026-06-23', '2026-05-15', '2026-07-03'),
+		FAN_OUT_DETECTION_RESULTS.DESTINATION_NODE_TYPES as DESTINATION_NODE_TYPES comment='Types of destination nodes involved in the fan-out detection pattern.' sample_values ('Account, Customer, Device', 'Account, Customer, Device, Address', 'Account, Address'),
+		FAN_OUT_DETECTION_RESULTS.FAN_IN_COUNT as FAN_IN_COUNT comment='The number of incoming connections or relationships to a given entity in the graph analysis.' sample_values ('1', '0', '2'),
+		FAN_OUT_DETECTION_RESULTS.FAN_OUT_COUNT as FAN_OUT_COUNT comment='The number of entities or accounts that fan out from a source node in the detection analysis.' sample_values ('39', '10', '3'),
+		FAN_OUT_DETECTION_RESULTS.IS_SUSPICIOUS as IS_SUSPICIOUS comment='Indicates whether the transaction or activity has been flagged as suspicious.' sample_values ('FALSE', 'TRUE'),
+		FAN_OUT_DETECTION_RESULTS.NODE_ID as NODE_ID comment='Customer identifier used as a node in the graph detection system.' sample_values ('CUST11560216', 'CUST01608184', 'CUST12932586'),
+		FAN_OUT_DETECTION_RESULTS.NODE_NAME as NODE_NAME comment='Customer identifier labels used in the fan-out detection graph analysis.' sample_values ('Transaction 39076', 'Customer #2983797', 'Customer 6173'),
+		FAN_OUT_DETECTION_RESULTS.NODE_TYPE as NODE_TYPE comment='The type of node in the graph representing entities such as customers, accounts, or transactions.' sample_values ('Device', 'Account', 'Transaction'),
+		FAN_OUT_DETECTION_RESULTS.OUTGOING_EDGE_TYPES as OUTGOING_EDGE_TYPES comment='Types of outgoing edges representing relationships between entities in the graph such as ownership, device usage, account transactions, and transfers.' sample_values ('FROM_ACCOUNT, INITIATED_FROM, TO_ACCOUNT', 'USES_DEVICE', 'OWNS, USES_DEVICE'),
+		FAN_OUT_DETECTION_RESULTS.OUTGOING_NODE_IDS as OUTGOING_NODE_IDS comment='Identifiers of nodes that are connected as outgoing relationships in a fan-out pattern detection analysis.' sample_values ('ACCT001602, ACCT006935, ACCT007339, DEV00281940, DEV00728030, DEV01937121, DEV02346143, DEV03797445, DEV04055804, DEV05227052, DEV05947537, DEV06769863, DEV06927010, DEV07101342, DEV07139709, DEV07737450, DEV08157410, DEV09212668, DEV09773375, DEV10325587, DEV10561112, DEV10797796, DEV12723462, DEV13384411, DEV15493794, DEV15949633, DEV17674763, DEV18084014, DEV19565622, DEV19861637, DEV20560211, DEV21459058, DEV24632192, DEV24663731, DEV24904579', 'ACCT_0000038599, ACCT_0000038600, DEV_0000012866', 'DEV00006165, DEV00008155, DEV00029143'),
+		FAN_OUT_DETECTION_RESULTS.RISK_FLAGS as RISK_FLAGS comment='Risk level classification assigned based on fan-out detection analysis.' sample_values ('MEDIUM_RISK', 'LOW_RISK', 'HIGH_RISK'),
+		FAN_OUT_DETECTION_RESULTS.RISK_SCORE as RISK_SCORE comment='A numerical score indicating the level of risk associated with the detected fan-out pattern.' sample_values ('888', '737', '712'),
+		FAN_OUT_DETECTION_RESULTS.TOTAL_DESTINATIONS as TOTAL_DESTINATIONS comment='The total number of destinations identified in the fan-out detection analysis.' sample_values ('56', '47', '40'),
+		GRAPH_ADJACENCY_FULL.IN_DEGREE as IN_DEGREE comment='The number of incoming edges or connections to a node in the graph.' sample_values ('1', '2'),
+		GRAPH_ADJACENCY_FULL.OUT_DEGREE as OUT_DEGREE comment='The number of outgoing edges or connections from a node in the graph.' sample_values ('3', '2', '1'),
+		GRAPH_ADJACENCY_FULL.TOTAL_DEGREE as TOTAL_DEGREE comment='The total number of connections or edges associated with a node in the graph.' sample_values ('1', '2', '3'),
+		KG_EDGE.EDGE_ID as EDGE_ID comment='Unique identifier for an edge in the knowledge graph.' sample_values ('EDGE_TO_0000032237', 'EDGE_TO_0000034829', 'EDGE_TO_0000035047'),
+		KG_EDGE.EDGE_TYPE as EDGE_TYPE comment='The type of relationship connecting entities in the knowledge graph.' sample_values ('OWNS', 'FROM_ACCOUNT', 'USES_DEVICE'),
+		KG_NODE.NODE_ID as NODE_ID comment='Unique identifier for a node in the knowledge graph representing either an account or device entity.' sample_values ('TXN_0000000006', 'TXN_0000000075', 'TXN_0000000187'),
+		KG_NODE.NODE_TYPE as NODE_TYPE comment='The type of entity node in the knowledge graph.' sample_values ('Transaction', 'Device', 'Customer'),
+		SHARED_DEVICE_NETWORK_RESULTS.CONNECTION_STRENGTH as CONNECTION_STRENGTH comment='The strength of the connection between devices in the network.' sample_values ('1'),
+		SHARED_DEVICE_NETWORK_RESULTS.CUSTOMER_ID as CUSTOMER_ID comment='Customer identifier used to uniquely identify individuals or entities within the system.' sample_values ('CUST00089774', 'CUST_0000015977', 'CUST_0000035713'),
+		SHARED_DEVICE_NETWORK_RESULTS.CUSTOMER_NAME as CUSTOMER_NAME comment='Customer names or identifiers within the shared device network analysis.' sample_values ('Customer 85540', 'Customer 29370', 'Customer 89774'),
+		SHARED_DEVICE_NETWORK_RESULTS.CUSTOMER_PROPS as CUSTOMER_PROPS comment='Customer properties including country location and associated risk score for shared device network analysis.' sample_values ('{
+  "country": "FR",
+  "customer_id": "CUST_0000007141",
+  "email": "customer7141@example.com",
+  "kyc_status": "VERIFIED",
+  "phone": "+16101335055",
+  "registration_date": "2022-01-16",
+  "risk_score": 22
+}', '{
+  "customer_id": "CUST00029370",
+  "date_of_birth": "1984-07-06",
+  "email": "customer29370@example.com",
+  "first_name": "FirstName29370",
+  "kyc_status": "unverified",
+  "last_name": "LastName29370",
+  "phone": "+15933183680",
+  "registration_date": "2023-11-02",
+  "risk_score": 82
+}', '{
+  "country": "UK",
+  "customer_id": "CUST_0000013981",
+  "email": "customer13981@example.com",
+  "kyc_status": "VERIFIED",
+  "phone": "+18699142894",
+  "registration_date": "2025-12-21",
+  "risk_score": 51
+}'),
+		SHARED_DEVICE_NETWORK_RESULTS.DEVICE_ID as DEVICE_ID comment='Unique identifier assigned to a device within the shared device network.' sample_values ('DEV00001661', 'DEV00002312', 'DEV00005590'),
+		SHARED_DEVICE_NETWORK_RESULTS.DEVICE_NAME as DEVICE_NAME comment='Identifier or name assigned to a device within the shared device network.' sample_values ('Device 1661', 'Device 24174', 'Device 4485'),
+		SHARED_DEVICE_NETWORK_RESULTS.DEVICE_PROPS as DEVICE_PROPS comment='Device properties including device identifier, operating system, browser, and trust status.' sample_values ('{
+  "device_id": "DEV00023368",
+  "device_type": "atm",
+  "first_seen": "2023-03-26",
+  "ip_address": "255.246.996094.190.964828.110.745956",
+  "is_trusted": false,
+  "last_seen": "2026-06-19",
+  "os": "Linux"
+}', '{
+  "browser": "Edge",
+  "device_id": "DEV_0000014565",
+  "device_type": "MOBILE",
+  "fingerprint": "59a807081092ebb373d0a2a42de9aaa4",
+  "ip_address": "170.71.148.150",
+  "last_seen": "2026-06-28",
+  "os": "Linux",
+  "trusted": true
+}', '{
+  "device_id": "DEV00002312",
+  "device_type": "mobile",
+  "first_seen": "2025-04-12",
+  "ip_address": "204.106.796875.131.417175.104.513348",
+  "is_trusted": true,
+  "last_seen": "2026-06-29",
+  "os": "Linux"
+}'),
+		SHARED_DEVICE_NETWORK_RESULTS.NETWORK_ID as NETWORK_ID comment='Unique identifier for a network of shared devices used in financial crime detection.' sample_values ('0001fdb5dcf184053dd727b7cce1742e774f97786d3ded5a2f8896a7ef345c7f', '003710aed3785dfc9d184631fd3e1cf11f071edd7a4b278c2d1033c21fc39f87', '00046f67a5abc25b795019bee901fc77900c96525ff8c5b9010b32c703815802'),
+		SHARED_DEVICE_NETWORK_RESULTS.NETWORK_SIZE as NETWORK_SIZE comment='The number of entities or devices within a shared device network.' sample_values ('7', '4', '3'),
+		SHARED_DEVICE_NETWORK_RESULTS.SHARED_USER_COUNT as SHARED_USER_COUNT comment='The number of users sharing a device within the network.' sample_values ('4', '7', '3'),
+		SHARED_DEVICE_NETWORK_RESULTS.DETECTED_AT as DETECTED_AT comment='The timestamp when the shared device network was detected.'
+	)
+	ai_verified_queries (
+		"0;1" AS ( 
+QUESTION 'What are the shared device network results?' 
+VERIFIED_AT 1784264332
+VERIFIED_BY 'Semantic Model Generator'
+ONBOARDING_QUESTION false
+SQL 'SELECT * FROM shared_device_network_results;'),
+		"1;1" AS ( 
+QUESTION 'What are the fan out detection results?' 
+VERIFIED_AT 1784264332
+VERIFIED_BY 'Semantic Model Generator'
+ONBOARDING_QUESTION false
+SQL 'SELECT * FROM fan_out_detection_results'),
+		"2;1" AS ( 
+QUESTION 'What are the fan-in detection results for fraud graph analysis?' 
+VERIFIED_AT 1784264332
+VERIFIED_BY 'Semantic Model Generator'
+ONBOARDING_QUESTION false
+SQL 'SELECT * FROM fan_in_detection_results'),
+		"3;1" AS ( 
+QUESTION 'How many relationships exist for each relationship type?' 
+VERIFIED_AT 1784264332
+VERIFIED_BY 'Semantic Model Generator'
+ONBOARDING_QUESTION false
+SQL 'SELECT EDGE_TYPE, COUNT(EDGE_ID) FROM kg_edge GROUP BY EDGE_TYPE;'),
+		"4;1" AS ( 
+QUESTION 'What is the count of entities by type?' 
+VERIFIED_AT 1784264332
+VERIFIED_BY 'Semantic Model Generator'
+ONBOARDING_QUESTION false
+SQL 'SELECT NODE_TYPE, COUNT(NODE_ID) FROM kg_node GROUP BY NODE_TYPE;'),
+		"5;1" AS ( 
+QUESTION 'How many relationships exist in the knowledge graph?' 
+VERIFIED_AT 1784264332
+VERIFIED_BY 'Semantic Model Generator'
+ONBOARDING_QUESTION false
+SQL 'SELECT COUNT(1) FROM kg_edge;'),
+		"6;1" AS ( 
+QUESTION 'How many entities do we have in the knowledge graph?' 
+VERIFIED_AT 1784264332
+VERIFIED_BY 'Semantic Model Generator'
+ONBOARDING_QUESTION false
+SQL 'SELECT COUNT(1) FROM kg_node;'),
+		"What are the high-risk nodes detected in fan-out analysis?" AS ( 
+QUESTION 'What are the high-risk nodes detected in fan-out analysis?' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT NODE_ID, NODE_NAME, NODE_TYPE, FAN_OUT_COUNT, RISK_SCORE FROM FAN_OUT_DETECTION_RESULTS WHERE IS_SUSPICIOUS = TRUE ORDER BY RISK_SCORE DESC'),
+		"Show me customers with the highest fan-in risk scores" AS ( 
+QUESTION 'Show me customers with the highest fan-in risk scores' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT DST_NODE_ID, DST_NODE_NAME, FAN_IN_COUNT, RISK_SCORE FROM FAN_IN_DETECTION_RESULTS WHERE DST_NODE_TYPE = ''Customer'' ORDER BY RISK_SCORE DESC LIMIT 20'),
+		"What shared device networks have more than 5 users?" AS ( 
+QUESTION 'What shared device networks have more than 5 users?' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT NETWORK_ID, NETWORK_SIZE, SHARED_USER_COUNT FROM SHARED_DEVICE_NETWORK_RESULTS WHERE SHARED_USER_COUNT > 5 GROUP BY NETWORK_ID, NETWORK_SIZE, SHARED_USER_COUNT ORDER BY SHARED_USER_COUNT DESC'),
+		"Show me nodes with the highest connectivity in the graph" AS ( 
+QUESTION 'Show me nodes with the highest connectivity in the graph' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT NODE_ID, IN_DEGREE, OUT_DEGREE, TOTAL_DEGREE FROM GRAPH_ADJACENCY_FULL ORDER BY TOTAL_DEGREE DESC LIMIT 50'),
+		"How many suspicious fan-out patterns are there by node type?" AS ( 
+QUESTION 'How many suspicious fan-out patterns are there by node type?' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT NODE_TYPE, COUNT(NODE_ID) as SUSPICIOUS_COUNT FROM FAN_OUT_DETECTION_RESULTS WHERE IS_SUSPICIOUS = TRUE GROUP BY NODE_TYPE'),
+		"What devices are connected to multiple customers in shared networks?" AS ( 
+QUESTION 'What devices are connected to multiple customers in shared networks?' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT DEVICE_ID, DEVICE_NAME, NETWORK_SIZE, SHARED_USER_COUNT FROM SHARED_DEVICE_NETWORK_RESULTS WHERE SHARED_USER_COUNT > 1 ORDER BY SHARED_USER_COUNT DESC'),
+		"Show me recent fan-in detections from the last 7 days" AS ( 
+QUESTION 'Show me recent fan-in detections from the last 7 days' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT DST_NODE_ID, DST_NODE_NAME, DST_NODE_TYPE, FAN_IN_COUNT, RISK_SCORE, DETECTION_TIMESTAMP FROM FAN_IN_DETECTION_RESULTS WHERE DETECTION_TIMESTAMP >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY DETECTION_TIMESTAMP DESC'),
+		"What Customer nodes have high outgoing connectivity?" AS ( 
+QUESTION 'What Customer nodes have high outgoing connectivity?' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT n.NODE_ID, n.NODE_TYPE, a.OUT_DEGREE, a.TOTAL_DEGREE FROM KG_NODE n JOIN GRAPH_ADJACENCY_FULL a ON n.NODE_ID = a.NODE_ID WHERE n.NODE_TYPE = ''Customer'' AND a.OUT_DEGREE > 10 ORDER BY a.OUT_DEGREE DESC'),
+		"Show me accounts with many incoming edges" AS ( 
+QUESTION 'Show me accounts with many incoming edges' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT n.NODE_ID, n.NODE_TYPE, a.IN_DEGREE FROM KG_NODE n JOIN GRAPH_ADJACENCY_FULL a ON n.NODE_ID = a.NODE_ID WHERE n.NODE_TYPE = ''Account'' AND a.IN_DEGREE > 50 ORDER BY a.IN_DEGREE DESC'),
+		"What are the risk flags distribution for fan-out detections?" AS ( 
+QUESTION 'What are the risk flags distribution for fan-out detections?' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT RISK_FLAGS, COUNT(NODE_ID) as COUNT FROM FAN_OUT_DETECTION_RESULTS GROUP BY RISK_FLAGS'),
+		"Show devices in suspicious fan-out patterns" AS ( 
+QUESTION 'Show devices in suspicious fan-out patterns' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT NODE_ID, NODE_NAME, FAN_OUT_COUNT, RISK_SCORE FROM FAN_OUT_DETECTION_RESULTS WHERE NODE_TYPE = ''Device'' AND IS_SUSPICIOUS = TRUE ORDER BY RISK_SCORE DESC'),
+		"What edge types connect to Customer nodes most frequently?" AS ( 
+QUESTION 'What edge types connect to Customer nodes most frequently?' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT e.EDGE_TYPE, COUNT(e.EDGE_ID) as EDGE_COUNT FROM KG_EDGE e JOIN KG_NODE n ON e.DST_ID = n.NODE_ID WHERE n.NODE_TYPE = ''Customer'' GROUP BY e.EDGE_TYPE ORDER BY EDGE_COUNT DESC'),
+		"Show Device nodes that have high outgoing connectivity" AS ( 
+QUESTION 'Show Device nodes that have high outgoing connectivity' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT n.NODE_ID, n.NODE_TYPE, a.OUT_DEGREE FROM KG_NODE n JOIN GRAPH_ADJACENCY_FULL a ON n.NODE_ID = a.NODE_ID WHERE n.NODE_TYPE = ''Device'' AND a.OUT_DEGREE > 5 ORDER BY a.OUT_DEGREE DESC'),
+		"What are the most common destination node types in fan-out patterns?" AS ( 
+QUESTION 'What are the most common destination node types in fan-out patterns?' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT DESTINATION_NODE_TYPES, COUNT(NODE_ID) as PATTERN_COUNT FROM FAN_OUT_DETECTION_RESULTS GROUP BY DESTINATION_NODE_TYPES ORDER BY PATTERN_COUNT DESC'),
+		"Which customers are connected through shared devices?" AS ( 
+QUESTION 'Which customers are connected through shared devices?' 
+VERIFIED_AT 1784328900
+ONBOARDING_QUESTION false
+SQL 'SELECT CUSTOMER_ID, CUSTOMER_NAME, DEVICE_ID, DEVICE_NAME, SHARED_USER_COUNT FROM SHARED_DEVICE_NETWORK_RESULTS WHERE SHARED_USER_COUNT > 1 ORDER BY SHARED_USER_COUNT DESC, CUSTOMER_ID')
+	)
+	with extension (CA='{"tables":[{"name":"FAN_IN_DETECTION_RESULTS","dimensions":[{"name":"DETECTION_RUN_ID"},{"name":"DISTINCT_SRC_NODES"},{"name":"DST_NODE_ID"},{"name":"DST_NODE_NAME"},{"name":"DST_NODE_TYPE"},{"name":"EDGE_TYPES"},{"name":"FAN_IN_COUNT"},{"name":"PARAM_EDGE_TYPE"},{"name":"PARAM_MIN_FAN_IN_THRESHOLD"},{"name":"PARAM_NODE_TYPE"},{"name":"PARAM_TIME_WINDOW_DAYS"}],"facts":[{"name":"RISK_SCORE"},{"name":"TOTAL_WEIGHT"}],"time_dimensions":[{"name":"DETECTION_TIMESTAMP"},{"name":"FIRST_SEEN"},{"name":"LAST_SEEN"}]},{"name":"FAN_OUT_DETECTION_RESULTS","dimensions":[{"name":"DESTINATION_NODE_TYPES"},{"name":"FAN_IN_COUNT"},{"name":"FAN_OUT_COUNT"},{"name":"IS_SUSPICIOUS"},{"name":"NODE_ID"},{"name":"NODE_NAME"},{"name":"NODE_TYPE"},{"name":"OUTGOING_EDGE_TYPES"},{"name":"OUTGOING_NODE_IDS"},{"name":"RISK_FLAGS"},{"name":"RISK_SCORE"},{"name":"TOTAL_DESTINATIONS"}],"facts":[{"name":"FAN_OUT_IN_RATIO"}]},{"name":"GRAPH_ADJACENCY_FULL","dimensions":[{"name":"IN_DEGREE"},{"name":"OUT_DEGREE"},{"name":"TOTAL_DEGREE"}]},{"name":"KG_EDGE","dimensions":[{"name":"EDGE_ID"},{"name":"EDGE_TYPE"}]},{"name":"KG_NODE","dimensions":[{"name":"NODE_ID"},{"name":"NODE_TYPE"}]},{"name":"SHARED_DEVICE_NETWORK_RESULTS","dimensions":[{"name":"CONNECTION_STRENGTH"},{"name":"CUSTOMER_ID"},{"name":"CUSTOMER_NAME"},{"name":"CUSTOMER_PROPS"},{"name":"DEVICE_ID"},{"name":"DEVICE_NAME"},{"name":"DEVICE_PROPS"},{"name":"NETWORK_ID"},{"name":"NETWORK_SIZE"},{"name":"SHARED_USER_COUNT"}],"facts":[{"name":"RISK_SCORE"}],"time_dimensions":[{"name":"DETECTED_AT","sample_values":["2026-07-16T06:26:28.693+0000"]}]}]}');
