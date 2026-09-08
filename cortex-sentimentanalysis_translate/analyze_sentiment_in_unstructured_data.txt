@@ -1,0 +1,157 @@
+{
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Streamlit Notebook",
+   "name": "streamlit"
+  },
+  "lastEditStatus": {
+   "notebookId": "jy4g7oygepw2gczzr7zr",
+   "authorId": "8741079258483",
+   "authorName": "ASHISHCHOPRA",
+   "authorEmail": "ashish.chopra@westpac.com.au",
+   "sessionId": "90282e34-6fc7-4c16-93df-4e57389a6634",
+   "lastEditTime": 1772252201168
+  }
+ },
+ "nbformat_minor": 5,
+ "nbformat": 4,
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "beafe711-0ff7-4aa6-bd2d-d58ffc95bb92",
+   "metadata": {
+    "collapsed": false,
+    "name": "OVERVIEW",
+    "resultHeight": 339
+   },
+   "source": "# Analyzing unstructured customer reviews with Snowflake Cortex"
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4db3f281-4a3d-48a5-b07e-3e967ea5a824",
+   "metadata": {
+    "collapsed": false,
+    "name": "INTRO_IMPORT_DATA",
+    "resultHeight": 134
+   },
+   "source": "## Import sample data"
+  },
+  {
+   "cell_type": "code",
+   "id": "9980dae7-06d9-45b4-85e8-1a5f7c5ff240",
+   "metadata": {
+    "language": "sql",
+    "name": "IMPORT_DATA"
+   },
+   "outputs": [],
+   "source": "USE ROLE ACCOUNTADMIN;\nUSE DATABASE AO_GUIDE;\nUSE SCHEMA MY_AOSCHEMA;\n\n  /*--\n  • file format and stage creation\n  --*/\n\n  CREATE OR REPLACE FILE FORMAT csv_ff \n    TYPE = 'csv';\n\n  CREATE OR REPLACE STAGE s3load\n    COMMENT = 'Quickstarts S3 Stage Connection'\n    URL = 's3://sfquickstarts/tastybytes-voc/'\n    FILE_FORMAT = csv_ff;\n\n\n  /*--\n  • raw zone table build \n  --*/\n\n  -- truck_reviews table\n  CREATE OR REPLACE TABLE truck_reviews\n  (\n      order_id NUMBER(38,0),\n      language VARCHAR(16777216),\n      source VARCHAR(16777216),\n      review VARCHAR(16777216),\n      review_id NUMBER(18,0)\n  );\n  \n  /*--\n  • raw zone table load \n  --*/\n  \n  -- truck_reviews table load\n  COPY INTO truck_reviews\n  FROM @s3load/raw_support/truck_reviews/;\n\n-- setup completion note\nSELECT 'Setup is complete' AS note;",
+   "execution_count": null
+  },
+  {
+   "cell_type": "markdown",
+   "id": "20f2093f-dd35-411b-8ede-90556f7e2ccf",
+   "metadata": {
+    "name": "INTRO_IMPORT_PACKAGES",
+    "collapsed": false
+   },
+   "source": "## Import python packages"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "3775908f-ca36-4846-8f38-5adca39217f2",
+   "metadata": {
+    "collapsed": false,
+    "language": "python",
+    "name": "IMPORT_PACKAGES",
+    "resultHeight": 0,
+    "codeCollapsed": false
+   },
+   "outputs": [],
+   "source": "# Import python packages\nimport streamlit as st\nimport pandas as pd\n\n# Snowpark\nfrom snowflake.snowpark.context import get_active_session\nimport snowflake.snowpark.functions as F\n\n# Cortex Functions\nimport snowflake.cortex  as cortex\n\nsession = get_active_session()"
+  },
+  {
+   "cell_type": "markdown",
+   "id": "ba1549f9-f4d0-447d-b447-4927a17e5d56",
+   "metadata": {
+    "collapsed": false,
+    "name": "INTRO_TABLE",
+    "resultHeight": 41
+   },
+   "source": "## Overview of Reviews Table"
+  },
+  {
+   "cell_type": "code",
+   "id": "c7dc6837-6c2a-4aed-820d-6c1ce45ce06e",
+   "metadata": {
+    "language": "sql",
+    "name": "PREVIEW_TABLE"
+   },
+   "outputs": [],
+   "source": "SELECT ORDER_ID, LANGUAGE, REVIEW FROM TRUCK_REVIEWS LIMIT 15;",
+   "execution_count": null
+  },
+  {
+   "cell_type": "markdown",
+   "id": "6bac2888-1344-4ea9-85aa-49e38afad859",
+   "metadata": {
+    "collapsed": false,
+    "name": "INTRO_SENTIMENT_ANALYSIS",
+    "resultHeight": 41
+   },
+   "source": "## Sentiment Analysis\nCortex Sentiment will return a number ranging from -1 to 1 indicating the level of negative (-1) or positive (1) sentiment in the text. Values around 0 indicate neutral sentiment, while numbers further from 0 indicate strength of sentiment. \nWe will perform sentiment analysis using Cortex both in Python on a Dataframe, or each cell in a column of a Snowflake table with SQL."
+  },
+  {
+   "cell_type": "markdown",
+   "id": "beee3af8-8b85-4caa-b8f2-121df67977c0",
+   "metadata": {
+    "name": "INTRO_PYTHON_CORTEX_SENTIMENT",
+    "collapsed": false
+   },
+   "source": "### Analyze sentiment on a Python dataframe\n"
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "965c69e0-5312-4f4f-89f1-12f52c849453",
+   "metadata": {
+    "collapsed": false,
+    "language": "python",
+    "name": "PYTHON_CORTEX_SENTIMENT",
+    "resultHeight": 188,
+    "codeCollapsed": false
+   },
+   "outputs": [],
+   "source": "# Understand the sentiment of customer review using Cortex Sentiment\nreviews_df = session.table('truck_reviews')\n\nreviews_df = reviews_df.withColumn('SENTIMENT', cortex.sentiment(F.col('REVIEW')))\n\nreviews_df.select([\"REVIEW\",\"SENTIMENT\"]).show(15, max_width = 100)"
+  },
+  {
+   "cell_type": "markdown",
+   "id": "cbcc44ed-ec2c-4000-a77b-44a8ae2b5ac4",
+   "metadata": {
+    "name": "INTRO_SQL_CORTEX_SENTIMENT",
+    "collapsed": false
+   },
+   "source": "### Analyze sentiment with a SQL query"
+  },
+  {
+   "cell_type": "code",
+   "id": "4da01225-d8c2-4707-9e32-dc01f36ab937",
+   "metadata": {
+    "language": "sql",
+    "name": "SQL_CORTEX_SENTIMENT"
+   },
+   "outputs": [],
+   "source": "SELECT \n  REVIEW_ID,\n  REVIEW,\n  SNOWFLAKE.CORTEX.SENTIMENT(REVIEW) AS SENTIMENT\nFROM TRUCK_REVIEWS\nLIMIT 15;",
+   "execution_count": null
+  },
+  {
+   "cell_type": "markdown",
+   "id": "e5137071-7b70-44f1-afac-2396cc03833f",
+   "metadata": {
+    "name": "CONCLUSION",
+    "collapsed": false
+   },
+   "source": "References -  Cortex Sentiment or Cortex LLM Functions (https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions) and the [Cortex Sentiment documentation](https://docs.snowflake.com/en/sql-reference/functions/sentiment-snowflake-cortex).\n"
+  }
+ ]
+}
