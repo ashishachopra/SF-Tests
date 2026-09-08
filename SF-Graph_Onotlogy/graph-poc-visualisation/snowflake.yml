@@ -1,0 +1,12 @@
+definition_version: 2
+entities:
+  streamlit_app:
+    type: streamlit
+    main_file: streamlit_app.py
+    title: "GraphPOC-Visualisation"
+    query_warehouse: "GBU_A01A0E_FINCRIME_XS_WH"
+    compute_pool: "SYSTEM_COMPUTE_POOL_CPU"
+    artifacts:
+      - pyproject.toml
+      - streamlit_app.py
+      - .streamlit/config.toml
