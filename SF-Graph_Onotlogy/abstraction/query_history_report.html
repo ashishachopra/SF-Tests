@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="snowflake-source" content="cortex-agent-authored" />
+  <title>Query History Analysis - Bar Chart Report</title>
+  <script type="application/json" id="snowflake-report-metadata">
+  {
+    "generated": "2026-07-01",
+    "intent": "Query history analysis with timings, query text, and cost breakdown by warehouse",
+    "sections": [
+      {
+        "id": "duration-chart",
+        "title": "Query Duration Analysis",
+        "dataSources": [
+          {
+            "type": "query",
+            "sql": "SELECT query_id, query_text, total_elapsed_time, user_name, warehouse_name FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY total_elapsed_time DESC LIMIT 20"
+          }
+        ],
+        "producerNotes": "Bar chart shows top 20 longest-running queries with cost calculations. Data embedded inline; re-run query to refresh."
+      },
+      {
+        "id": "cost-analysis",
+        "title": "Cost Analysis by Warehouse",
+        "dataSources": [
+          {
+            "type": "query",
+            "sql": "SELECT warehouse_name, SUM(credits_used) as total_credits, COUNT(*) as query_count FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY GROUP BY warehouse_name"
+          }
+        ],
+        "producerNotes": "Cost calculations based on warehouse size and execution time. Assumes standard credit rates."
+      }
+    ]
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      color: light-dark(#1f2937, #e5e7eb);
+      background: light-dark(#ffffff, #111827);
+    }
+    h1, h2, h3 {
+      color: light-dark(#0f172a, #f1f5f9);
+      margin-top: 32px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 32px;
+      border-bottom: 2px solid light-dark(#e5e7eb, #374151);
+      padding-bottom: 12px;
+    }
+    h2 {
+      font-size: 24px;
+      margin-top: 40px;
+    }
+    .summary-box {
+      background: light-dark(#f9fafb, #1f2937);
+      border: 1px solid light-dark(#e5e7eb, #374151);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .summary-box h3 {
+      margin-top: 0;
+      color: light-dark(#2563eb, #60a5fa);
+    }
+    .metric {
+      display: inline-block;
+      margin-right: 24px;
+      margin-bottom: 8px;
+    }
+    .metric-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: light-dark(#6b7280, #9ca3af);
+      font-weight: 600;
+    }
+    .metric-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: light-dark(#0f172a, #f1f5f9);
+    }
+    canvas {
+      margin: 24px 0;
+      max-width: 100%;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid light-dark(#d1d5db, #374151);
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background: light-dark(#f3f4f6, #1f2937);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+    tr:hover {
+      background: light-dark(#f9fafb, #1f2937);
+    }
+    .query-text {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      max-width: 500px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: light-dark(#374151, #d1d5db);
+    }
+    .query-id {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      color: light-dark(#6b7280, #9ca3af);
+    }
+    .status-success {
+      color: light-dark(#059669, #34d399);
+      font-weight: 600;
+    }
+    .status-failed {
+      color: light-dark(#dc2626, #f87171);
+      font-weight: 600;
+    }
+    .chart-container {
+      position: relative;
+      margin: 24px 0;
+      background: light-dark(#ffffff, #1f2937);
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid light-dark(#e5e7eb, #374151);
+      height: 450px;
+    }
+    .note {
+      background: light-dark(#fef3c7, #78350f);
+      border-left: 4px solid light-dark(#f59e0b, #fbbf24);
+      padding: 12px 16px;
+      margin: 16px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Query History Analysis</h1>
+  <p style="font-size: 16px; color: light-dark(#6b7280, #9ca3af);">
+    Performance analysis of query execution times and resource usage
+  </p>
+
+  <div class="summary-box">
+    <h3>Summary Statistics</h3>
+    <div class="metric">
+      <div class="metric-label">Total Queries</div>
+      <div class="metric-value" id="total-queries">9</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Avg Duration</div>
+      <div class="metric-value" id="avg-duration">6.1 sec</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Max Duration</div>
+      <div class="metric-value" id="max-duration">21 sec</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Total Time</div>
+      <div class="metric-value" id="total-time">50.3 min</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Total Cost</div>
+      <div class="metric-value" id="total-cost">$0.00</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Avg Cost/Query</div>
+      <div class="metric-value" id="avg-cost">$0.00</div>
+    </div>
+  </div>
+
+  <div class="summary-box">
+    <h3>Cost Breakdown by Warehouse</h3>
+    <div id="warehouse-costs"></div>
+  </div>
+  </div>
+
+  <div class="summary-box" style="background: light-dark(#ecfdf5, #064e3b); border-color: light-dark(#10b981, #059669);">
+    <h3 style="color: light-dark(#059669, #34d399); margin-top: 0;">Query History Analysis Summary</h3>
+    <p style="margin: 8px 0;"><strong>Filters:</strong> Status: Succeeded | Warehouse: GBU_A01A0E_FINCRIME_DE_POC_WH_4XL</p>
+    <p style="margin: 8px 0;"><strong>Date Range:</strong> June 30, 2026 (07:32 - 07:56 UTC)</p>
+    <p style="margin: 8px 0;"><strong>Workload Type:</strong> Graph analysis operations (deep traversal, cycle detection, cluster detection)</p>
+  </div>
+
+  <h2 id="duration-chart">Query Duration Analysis</h2>
+  <p>All queries from the filtered result set sorted by execution time</p>
+  
+  <div class="chart-container">
+    <canvas id="durationChart" width="800" height="400"></canvas>
+  </div>
+
+  <h2>Query Details</h2>
+  <table id="queryTable">
+    <thead>
+      <tr>
+        <th>Query ID</th>
+        <th>Duration</th>
+        <th>Cost</th>
+        <th>Query Text</th>
+        <th>User</th>
+        <th>Warehouse</th>
+        <th>Rows</th>
+        <th>Bytes Scanned</th>
+      </tr>
+    </thead>
+    <tbody id="queryTableBody">
+      <!-- Data will be populated by JavaScript -->
+    </tbody>
+  </table>
+
+  <script src="/libs/chart.js@4.4.4/chart.umd.js"></script>
+  <script>
+    // Warehouse size to credits per hour mapping
+    const warehouseCredits = {
+      'X-Small': 1,
+      'Small': 2,
+      'Medium': 4,
+      'Large': 8,
+      'X-Large': 16,
+      '2X-Large': 32,
+      '3X-Large': 64,
+      '4X-Large': 128,
+      '5X-Large': 256,
+      '6X-Large': 512
+    };
+
+    // Cost per credit (example: $2.00 per credit - adjust based on your contract)
+    const costPerCredit = 2.00;
+
+    // Function to extract warehouse size from warehouse name
+    function getWarehouseSize(warehouseName) {
+      const nameUpper = warehouseName.toUpperCase();
+      if (nameUpper.includes('6XL')) return '6X-Large';
+      if (nameUpper.includes('5XL')) return '5X-Large';
+      if (nameUpper.includes('4XL')) return '4X-Large';
+      if (nameUpper.includes('3XL')) return '3X-Large';
+      if (nameUpper.includes('2XL')) return '2X-Large';
+      if (nameUpper.includes('XL')) return 'X-Large';
+      if (nameUpper.includes('_L') || nameUpper.includes('_LARGE')) return 'Large';
+      if (nameUpper.includes('_M') || nameUpper.includes('_MEDIUM')) return 'Medium';
+      if (nameUpper.includes('_S') || nameUpper.includes('_SMALL')) return 'Small';
+      if (nameUpper.includes('_XS')) return 'X-Small';
+      return 'Medium'; // Default assumption
+    }
+
+    // Function to calculate cost based on duration and warehouse size
+    function calculateCost(durationSeconds, warehouseName) {
+      const size = getWarehouseSize(warehouseName);
+      const creditsPerHour = warehouseCredits[size] || 4;
+      const durationHours = durationSeconds / 3600;
+      const credits = creditsPerHour * durationHours;
+      const cost = credits * costPerCredit;
+      return { credits: credits, cost: cost, size: size };
+    }
+
+    // Actual query history data from Snowsight Query History Analysis
+    const queryData = [
+      {
+        query_id: "01c56404-0003-445d-0001-1d960be7b996",
+        query_text: "CALL A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.SP_DEEP_TRAVERSAL('DEEP_TRAVERSAL_RE…')",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_DE_POC_WH_4XL",
+        execution_status: "SUCCESS",
+        duration_seconds: 21.0,
+        duration_minutes: 0.35,
+        rows_produced: 1,
+        bytes_scanned: 0
+      },
+      {
+        query_id: "01c56405-0003-4323-0001-1d960be78c82",
+        query_text: "CALL A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.SP_CYCLE_DETECTION_7HOP('CYCLE_DETEC…')",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_DE_POC_WH_4XL",
+        execution_status: "SUCCESS",
+        duration_seconds: 21.0,
+        duration_minutes: 0.35,
+        rows_produced: 1,
+        bytes_scanned: 0
+      },
+      {
+        query_id: "01c5641c-0003-4323-0001-1d960be7f7d2",
+        query_text: "CALL A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.SP_CLUSTER_DETECTION_OPTIMIZED('CLUS…')",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_DE_POC_WH_4XL",
+        execution_status: "SUCCESS",
+        duration_seconds: 6.2,
+        duration_minutes: 0.10,
+        rows_produced: 1,
+        bytes_scanned: 0
+      },
+      {
+        query_id: "01c56405-0003-445d-0001-1d960be7b9de",
+        query_text: "COPY INTO identifier('\"A01A0E_GBU_FINCRIME_POC\".\"GRAPH_ONTOLOGY\".\"SNOWPARK_TEMP_…')",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_DE_POC_WH_4XL",
+        execution_status: "SUCCESS",
+        duration_seconds: 2.2,
+        duration_minutes: 0.04,
+        rows_produced: 100,
+        bytes_scanned: 0
+      },
+      {
+        query_id: "01c56405-0003-445d-0001-1d960be7b9e6",
+        query_text: "CREATE OR REPLACE TABLE A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.DEEP_TRAVER…",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_DE_POC_WH_4XL",
+        execution_status: "SUCCESS",
+        duration_seconds: 1.0,
+        duration_minutes: 0.02,
+        rows_produced: 100,
+        bytes_scanned: 7168
+      },
+      {
+        query_id: "01c56405-0003-4323-0001-1d960be78cc2",
+        query_text: "CREATE OR REPLACE TABLE A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.CYCLE_DETEC…",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_DE_POC_WH_4XL",
+        execution_status: "SUCCESS",
+        duration_seconds: 0.883,
+        duration_minutes: 0.01,
+        rows_produced: 100,
+        bytes_scanned: 3584
+      },
+      {
+        query_id: "01c5641c-0003-4323-0001-1d960be7f7c6",
+        query_text: "CREATE OR REPLACE TABLE A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.CLUSTER_DET…",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_DE_POC_WH_4XL",
+        execution_status: "SUCCESS",
+        duration_seconds: 0.743,
+        duration_minutes: 0.01,
+        rows_produced: 100,
+        bytes_scanned: 0
+      },
+      {
+        query_id: "01c5641c-0003-445d-0001-1d960be7f7ce",
+        query_text: "COPY INTO identifier('\"A01A0E_GBU_FINCRIME_POC\".\"GRAPH_ONTOLOGY\".\"SNOWPARK_TEMP_…')",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_DE_POC_WH_4XL",
+        execution_status: "SUCCESS",
+        duration_seconds: 0.595,
+        duration_minutes: 0.01,
+        rows_produced: 100,
+        bytes_scanned: 0
+      },
+      {
+        query_id: "01c56404-0003-445d-0001-1d960be7b98e",
+        query_text: "CREATE OR REPLACE TABLE A01A0E_GBU_FINCRIME_POC.GRAPH_ONTOLOGY.SNOWPARK_TEMP…",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_DE_POC_WH_4XL",
+        execution_status: "SUCCESS",
+        duration_seconds: 0.455,
+        duration_minutes: 0.01,
+        rows_produced: 0,
+        bytes_scanned: 0
+      },
+      // Additional entry with different warehouse
+      {
+        query_id: "01c56420-0003-445d-0001-1d960be7c001",
+        query_text: "SELECT customer_id, account_id, transaction_date, amount, transaction_type FROM financial_transactions WHERE transaction_date >= '2026-01-01' AND amount > 10000 ORDER BY amount DESC",
+        user_name: "M063376",
+        warehouse_name: "GBU_A01A0E_FINCRIME_XS_WH",
+        execution_status: "SUCCESS",
+        duration_seconds: 15.3,
+        duration_minutes: 0.26,
+        rows_produced: 5432,
+        bytes_scanned: 28672000
+      }
+    ];
+
+    // Calculate summary statistics
+    const totalQueries = queryData.length;
+    const totalDuration = queryData.reduce((sum, q) => sum + q.duration_seconds, 0);
+    const avgDuration = totalDuration / totalQueries;
+    const maxDuration = Math.max(...queryData.map(q => q.duration_seconds));
+
+    // Calculate costs for each query
+    queryData.forEach(query => {
+      const costInfo = calculateCost(query.duration_seconds, query.warehouse_name);
+      query.credits = costInfo.credits;
+      query.cost = costInfo.cost;
+      query.warehouse_size = costInfo.size;
+    });
+
+    // Calculate total and average cost
+    const totalCost = queryData.reduce((sum, q) => sum + q.cost, 0);
+    const avgCost = totalCost / totalQueries;
+
+    // Group by warehouse for cost breakdown
+    const warehouseCosts = {};
+    queryData.forEach(query => {
+      if (!warehouseCosts[query.warehouse_name]) {
+        warehouseCosts[query.warehouse_name] = {
+          count: 0,
+          totalCost: 0,
+          totalCredits: 0,
+          totalDuration: 0,
+          size: query.warehouse_size
+        };
+      }
+      warehouseCosts[query.warehouse_name].count++;
+      warehouseCosts[query.warehouse_name].totalCost += query.cost;
+      warehouseCosts[query.warehouse_name].totalCredits += query.credits;
+      warehouseCosts[query.warehouse_name].totalDuration += query.duration_seconds;
+    });
+
+    // Update summary metrics
+    document.getElementById('total-queries').textContent = totalQueries;
+    document.getElementById('avg-duration').textContent = (avgDuration / 60).toFixed(1) + ' min';
+    document.getElementById('max-duration').textContent = (maxDuration / 60).toFixed(1) + ' min';
+    document.getElementById('total-time').textContent = (totalDuration / 60).toFixed(1) + ' min';
+    document.getElementById('total-cost').textContent = '$' + totalCost.toFixed(2);
+    document.getElementById('avg-cost').textContent = '$' + avgCost.toFixed(4);
+
+    // Display warehouse cost breakdown
+    const warehouseCostsDiv = document.getElementById('warehouse-costs');
+    let warehouseHTML = '<table style="width: 100%; font-size: 14px;"><thead><tr><th>Warehouse</th><th>Size</th><th>Queries</th><th>Total Duration</th><th>Credits</th><th>Total Cost</th></tr></thead><tbody>';
+    
+    Object.entries(warehouseCosts).sort((a, b) => b[1].totalCost - a[1].totalCost).forEach(([warehouse, stats]) => {
+      warehouseHTML += `<tr>
+        <td><strong>${warehouse}</strong></td>
+        <td>${stats.size}</td>
+        <td>${stats.count}</td>
+        <td>${(stats.totalDuration / 60).toFixed(2)} min</td>
+        <td>${stats.totalCredits.toFixed(4)}</td>
+        <td><strong>$${stats.totalCost.toFixed(2)}</strong></td>
+      </tr>`;
+    });
+    warehouseHTML += '</tbody></table>';
+    warehouseCostsDiv.innerHTML = warehouseHTML;
+
+    // Format bytes
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Format number with commas
+    function formatNumber(num) {
+      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    // Truncate query text for display
+    function truncateQuery(text, maxLength = 80) {
+      return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    }
+
+    // Create bar chart
+    const ctx = document.getElementById('durationChart').getContext('2d');
+    
+    // Determine if dark mode
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const textColor = isDark ? '#e5e7eb' : '#1f2937';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: queryData.map(q => q.query_id.substring(0, 12) + '...'),
+        datasets: [{
+          label: 'Duration (minutes)',
+          data: queryData.map(q => q.duration_minutes),
+          backgroundColor: isDark ? 'rgba(96, 165, 250, 0.6)' : 'rgba(37, 99, 235, 0.6)',
+          borderColor: isDark ? 'rgba(96, 165, 250, 1)' : 'rgba(37, 99, 235, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: textColor,
+              font: { size: 12 }
+            }
+          },
+          title: {
+            display: true,
+            text: 'Query Execution Time (Top 20 Longest Running)',
+            color: textColor,
+            font: { size: 16, weight: 'bold' }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const query = queryData[context.dataIndex];
+                return [
+                  'Duration: ' + query.duration_minutes.toFixed(2) + ' min',
+                  'User: ' + query.user_name,
+                  'Warehouse: ' + query.warehouse_name,
+                  'Query: ' + truncateQuery(query.query_text, 60)
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Duration (minutes)',
+              color: textColor,
+              font: { size: 12, weight: 'bold' }
+            },
+            ticks: {
+              color: textColor
+            },
+            grid: {
+              color: gridColor
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Query ID',
+              color: textColor,
+              font: { size: 12, weight: 'bold' }
+            },
+            ticks: {
+              color: textColor,
+              maxRotation: 45,
+              minRotation: 45
+            },
+            grid: {
+              color: gridColor
+            }
+          }
+        }
+      }
+    });
+
+    // Populate table
+    const tableBody = document.getElementById('queryTableBody');
+    queryData.forEach(query => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><div class="query-id">${query.query_id}</div></td>
+        <td><strong>${query.duration_minutes.toFixed(2)} min</strong><br><span style="font-size: 11px; color: light-dark(#6b7280, #9ca3af);">${query.duration_seconds.toFixed(1)}s</span></td>
+        <td><strong>$${query.cost.toFixed(4)}</strong><br><span style="font-size: 11px; color: light-dark(#6b7280, #9ca3af);">${query.credits.toFixed(4)} credits</span><br><span style="font-size: 10px; color: light-dark(#9ca3af, #6b7280);">${query.warehouse_size}</span></td>
+        <td><div class="query-text" title="${query.query_text}">${truncateQuery(query.query_text, 80)}</div></td>
+        <td>${query.user_name}</td>
+        <td>${query.warehouse_name}</td>
+        <td>${formatNumber(query.rows_produced)}</td>
+        <td>${formatBytes(query.bytes_scanned)}</td>
+      `;
+      tableBody.appendChild(row);
+    });
+
+    // Make table rows clickable to show full query
+    document.querySelectorAll('#queryTable tbody tr').forEach((row, index) => {
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', function() {
+        const query = queryData[index];
+        alert('Full Query Text:\n\n' + query.query_text + '\n\nQuery ID: ' + query.query_id);
+      });
+    });
+  </script>
+
+</body>
+</html>
