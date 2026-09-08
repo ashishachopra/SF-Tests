@@ -1,0 +1,73 @@
+CREATE OR REPLACE PROCEDURE ingest_owl_to_iceberg_v2(file_relative_path STRING)
+RETURNS STRING
+LANGUAGE PYTHON
+RUNTIME_VERSION = '3.10'
+PACKAGES = ('snowflake-snowpark-python', 'rdflib')
+HANDLER = 'main'
+EXECUTE AS CALLER
+AS
+$$
+from snowflake.snowpark.files import SnowflakeFile
+from rdflib import Graph, Namespace
+from collections import defaultdict
+import json
+
+def main(session, file_relative_path):
+    stage_file_url = f"@my_external_owl_stage/{file_relative_path}"
+    
+    with SnowflakeFile.open(stage_file_url, 'r') as f:
+        owl_data = f.read()
+    
+    g = Graph()
+    g.parse(data=owl_data, format="turtle")
+    
+    # Nested mapping collection dictionary: { tx_id: { "cust": id, "amount": val, "accounts": set(), "devices": set() } }
+    tx_map = defaultdict(lambda: {"cust": None, "amount": 0.0, "accounts": set(), "devices": set()})
+    
+    # Query to fetch raw linked graph fragments 
+    query = """
+    PREFIX ex: <http://example.org>
+    SELECT ?custId ?accId ?txId ?amount ?devId
+    WHERE {
+        ?customer ex:customerId ?custId .
+        ?customer ex:hasAccount ?account .
+        ?account ex:accountId ?accId .
+        ?account ex:initiatedTransaction ?tx .
+        ?tx ex:transactionId ?txId .
+        ?tx ex:amount ?amount .
+        ?tx ex:usedDevice ?device .
+        ?device ex:deviceId ?devId .
+    }
+    """
+    
+    qres = g.query(query)
+    
+    # Process and dynamically group data fragments to manage many-to-many records
+    for row in qres:
+        tx_id = str(row.txId)
+        tx_map[tx_id]["cust"] = str(row.custId)
+        tx_map[tx_id]["amount"] = float(row.amount)
+        tx_map[tx_id]["accounts"].add(str(row.accId))
+        tx_map[tx_id]["devices"].add(str(row.devId))
+        
+    parsed_rows = []
+    for tx_id, data in tx_map.items():
+        parsed_rows.append([
+            data["cust"],
+            list(data["accounts"]), # Converted to Python list -> translates to Snowflake Array
+            tx_id,
+            data["amount"],
+            list(data["devices"])   # Converted to Python list -> translates to Snowflake Array
+        ])
+        
+    if not parsed_rows:
+        return "No complete data structures found."
+        
+    columns = ["CUSTOMER_ID", "ACCOUNTS", "TRANSACTION_ID", "AMOUNT", "DEVICES"]
+    df = session.create_dataframe(parsed_rows, schema=columns)
+    
+    # Write aggregated structural entities directly to Iceberg
+    df.write.mode("append").save_as_table("customer_transactions_iceberg")
+    
+    return f"Processed OWL file. Ingested {len(parsed_rows)} unique consolidated transaction rows."
+$$;

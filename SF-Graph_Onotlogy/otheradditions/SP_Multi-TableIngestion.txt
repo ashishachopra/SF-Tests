@@ -1,0 +1,107 @@
+CREATE OR REPLACE PROCEDURE merge_owl_to_star_schema(file_relative_path STRING)
+RETURNS STRING
+LANGUAGE PYTHON
+RUNTIME_VERSION = '3.10'
+PACKAGES = ('snowflake-snowpark-python', 'rdflib')
+HANDLER = 'main'
+EXECUTE AS CALLER
+AS
+$$
+from snowflake.snowpark.files import SnowflakeFile
+from rdflib import Graph, Namespace
+
+def main(session, file_relative_path):
+    stage_file_url = f"@my_external_owl_stage/{file_relative_path}"
+    
+    with SnowflakeFile.open(stage_file_url, 'r') as f:
+        owl_data = f.read()
+    
+    g = Graph()
+    g.parse(data=owl_data, format="turtle")
+    
+    customers = set()
+    accounts = set()     
+    devices = set()
+    transactions = set() 
+    bridge_tx_dev = set() 
+    
+    query = """
+    PREFIX ex: <http://example.org>
+    SELECT ?custId ?accId ?txId ?amount ?devId
+    WHERE {
+        ?customer ex:customerId ?custId .
+        ?customer ex:hasAccount ?account .
+        ?account ex:accountId ?accId .
+        ?account ex:initiatedTransaction ?tx .
+        ?tx ex:transactionId ?txId .
+        ?tx ex:amount ?amount .
+        ?tx ex:usedDevice ?device .
+        ?device ex:deviceId ?devId .
+    }
+    """
+    
+    qres = g.query(query)
+    for row in qres:
+        c_id = str(row.custId)
+        a_id = str(row.accId)
+        t_id = str(row.txId)
+        amt = float(row.amount)
+        d_id = str(row.devId)
+        
+        customers.add((c_id,))
+        accounts.add((a_id, c_id))
+        devices.add((d_id,))
+        transactions.add((t_id, a_id, amt))
+        bridge_tx_dev.add((t_id, d_id))
+        
+    if not transactions:
+        return "No operational data structures found."
+
+    # Robust functional macro to execute transactional MERGE logic via staging tables
+    def merge_into_iceberg(data_list, column_names, target_table, join_condition, update_clause=None):
+        # 1. Write incoming batches to an isolated session-scoped temp table
+        temp_table_name = f"stg_{target_table}"
+        df = session.create_dataframe(list(data_list), schema=column_names)
+        df.write.mode("overwrite").save_as_table(temp_table_name, table_type="temporary")
+        
+        # 2. Structure complete relational MERGE SQL query 
+        set_clause = f"WHEN MATCHED THEN UPDATE SET {update_clause}" if update_clause else ""
+        
+        merge_sql = f"""
+            MERGE INTO {target_table} AS tgt
+            USING {temp_table_name} AS src
+            ON {join_condition}
+            {set_clause}
+            WHEN NOT MATCHED THEN
+                INSERT ({', '.join(column_names)})
+                VALUES ({', '.join([f'src.{col}' for col in column_names])})
+        """
+        session.sql(merge_sql).collect()
+
+    # 3. Safely execute deduplicated updates on all dimensional boundaries
+    # Dimensions match on business key; no updates required for simple key tables
+    merge_into_iceberg(customers, ["CUSTOMER_ID"], "dim_customers", "tgt.CUSTOMER_ID = src.CUSTOMER_ID")
+    
+    merge_into_iceberg(accounts, ["ACCOUNT_ID", "CUSTOMER_ID"], "dim_accounts", "tgt.ACCOUNT_ID = src.ACCOUNT_ID")
+    
+    merge_into_iceberg(devices, ["DEVICE_ID"], "dim_devices", "tgt.DEVICE_ID = src.DEVICE_ID")
+    
+    # Facts and Bridges track volatile numeric metrics (like AMOUNT) or relationship pairings
+    merge_into_iceberg(
+        transactions, 
+        ["TRANSACTION_ID", "ACCOUNT_ID", "AMOUNT"], 
+        "fact_transactions", 
+        "tgt.TRANSACTION_ID = src.TRANSACTION_ID",
+        update_clause="tgt.AMOUNT = src.AMOUNT, tgt.ACCOUNT_ID = src.ACCOUNT_ID"
+    )
+    
+    merge_into_iceberg(
+        bridge_tx_dev, 
+        ["TRANSACTION_ID", "DEVICE_ID"], 
+        "bridge_transaction_devices", 
+        "tgt.TRANSACTION_ID = src.TRANSACTION_ID AND tgt.DEVICE_ID = src.DEVICE_ID"
+        # No updates needed on a clean cross-bridge join match
+    )
+    
+    return "Ontology structure successfully upserted and merged into Star Schema Iceberg Tables."
+$$;

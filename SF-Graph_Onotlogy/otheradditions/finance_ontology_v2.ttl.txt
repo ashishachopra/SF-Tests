@@ -1,0 +1,48 @@
+This updated file illustrates complex relationships:
+•	Cust_101 has two accounts (Acc_5001, Acc_5002).
+•	Tx_7701 was validated using two devices simultaneously (Dev_99, Dev_100)—a many-to-many device relationship.
+turtle
+@prefix ex: <http://example.org> .
+@prefix owl: <http://w3.org> .
+@prefix rdf: <http://w3.org> .
+@prefix xsd: <http://w3.org> .
+@prefix rdfs: <http://w3.org> .
+
+<http://example.org> a owl:Ontology .
+
+### Classes & Properties (Same as before but used flexibly for M:M)
+ex:Customer a owl:Class .
+ex:Account a owl:Class .
+ex:Transaction a owl:Class .
+ex:Device a owl:Class .
+
+ex:hasAccount a owl:ObjectProperty ; rdfs:domain ex:Customer ; rdfs:range ex:Account .
+ex:initiatedTransaction a owl:ObjectProperty ; rdfs:domain ex:Account ; rdfs:range ex:Transaction .
+ex:usedDevice a owl:ObjectProperty ; rdfs:domain ex:Transaction ; rdfs:range ex:Device .
+
+ex:customerId a owl:DatatypeProperty ; rdfs:domain ex:Customer .
+ex:accountId a owl:DatatypeProperty ; rdfs:domain ex:Account .
+ex:transactionId a owl:DatatypeProperty ; rdfs:domain ex:Transaction .
+ex:amount a owl:DatatypeProperty ; rdfs:domain ex:Transaction .
+ex:deviceId a owl:DatatypeProperty ; rdfs:domain ex:Device .
+
+### Sample Data Individuals (With M:M structural associations)
+ex:Cust_101 a ex:Customer ; ex:customerId "CUST-9832" .
+
+ex:Acc_5001 a ex:Account ; ex:accountId "ACC-4412" .
+ex:Acc_5002 a ex:Account ; ex:accountId "ACC-8877" .
+
+ex:Tx_7701 a ex:Transaction ; ex:transactionId "TX-10023" ; ex:amount 250.50 .
+
+ex:Dev_99 a ex:Device ; ex:deviceId "DEV-IPHONE15" .
+ex:Dev_100 a ex:Device ; ex:deviceId "DEV-MACBOOKPRO" .
+
+### M:M Linking Graph Network
+ex:Cust_101 ex:hasAccount ex:Acc_5001 .
+ex:Cust_101 ex:hasAccount ex:Acc_5002 .  # Customer has multiple accounts
+
+ex:Acc_5001 ex:initiatedTransaction ex:Tx_7701 .
+ex:Acc_5002 ex:initiatedTransaction ex:Tx_7701 .  # Transaction tied to multiple joint accounts
+
+ex:Tx_7701 ex:usedDevice ex:Dev_99 .   # Transaction verified on Device 1
+ex:Tx_7701 ex:usedDevice ex:Dev_100 .  # Transaction verified on Device 2 (Many devices to one TX)
