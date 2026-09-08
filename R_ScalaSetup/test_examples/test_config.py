@@ -81,7 +81,7 @@ class TestLoadConfig:
         assert cfg.logging.level == "DEBUG"
 
     def test_boolean_language_shorthand(self, tmp_path):
-        #Support 'languages.r: true' as a shorthand.
+        # Support 'languages.r: true' as a shorthand.
         data = {"languages": {"r": True, "scala": False}}
         path = self._write_yaml(data, str(tmp_path))
         cfg = load_config(path)
@@ -131,7 +131,7 @@ class TestCliOverrides:
 
 
 class TestConfigRoundTrip:
-    #Test config_to_dict() -> yaml -> load_config().
+    # Test config_to_dict() -> yaml -> load_config().
 
     def test_round_trip(self, tmp_path):
         cfg = ToolkitConfig()
