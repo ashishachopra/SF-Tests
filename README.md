@@ -1,6 +1,8 @@
+<div align="center">
+  
 # Snowflake test across different capabilities
 
-# Other tests
+# Few Others
 | Project |
 |---------|
 | [Snowpipe Streams](https://github.com/ashishachopra/SF-Kafka-SnowpipeStream), </br> [Snowpipe Streams](https://github.com/ashishachopra/snowpipe-stream) |
@@ -10,3 +12,5 @@
 | [SF DocAI](https://github.com/ashishachopra/SF-DocAI) | 
 | [SF Streamlit MCP](https://github.com/ashishachopra/streamlit_mcp_cortex) |
 | [SF Online FS](https://github.com/ashishachopra/SF-OnlineFS) |
+
+</div>
