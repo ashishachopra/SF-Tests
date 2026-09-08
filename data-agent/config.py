@@ -1,0 +1,15 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Snowflake Config
+SNOWFLAKE_USER = os.getenv("SNOWFLAKE_USER")
+SNOWFLAKE_PASSWORD = os.getenv("SNOWFLAKE_PASSWORD")
+SNOWFLAKE_ACCOUNT = os.getenv("SNOWFLAKE_ACCOUNT")
+SNOWFLAKE_WAREHOUSE = os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH")
+SNOWFLAKE_DATABASE = os.getenv("SNOWFLAKE_DATABASE", "ANALYTICS")
+SNOWFLAKE_SCHEMA = os.getenv("SNOWFLAKE_SCHEMA", "DBT_SCHEMA")
+
+# OpenAI Config
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
