@@ -1,0 +1,68 @@
+import snowflake.snowpark as snowpark
+from snowflake.snowpark.types import StructType, StructField, IntegerType, StringType
+import random
+
+def main(session: snowpark.Session):
+    name_variations = {
+        "John Smith": ["John Smith", "Jon Smyth", "Jonathan Smitt", "Jhon Smit", "Jonh Smeeth"],
+        "Sarah Johnson": ["Sarah Johnson", "Sara Johnsen", "Sarrah Jonsson", "Sera Jonson", "Sahra Jonsen"],
+        "Michael Brown": ["Michael Brown", "Mike Browne", "Mikel Broun", "Micheal Braun", "Mykal Browen"],
+        "Emily Davis": ["Emily Davis", "Emma Davies", "Emilee Daviz", "Emely Daviss", "Emilie Dayvis"],
+        "David Wilson": ["David Wilson", "Dave Willson", "Davide Wilsson", "Daved Wylson", "Davit Wilsun"],
+        "Chris Anderson": ["Chris Anderson", "Christopher Andersen", "Kristofer Andersson", "Kris Andarson", "Chriss Andarssen"],
+        "Amy Clark": ["Amy Clark", "Aimee Clarke", "Amie Clarc", "Ami Klark", "Ammy Clak"],
+        "Robert Martinez": ["Robert Martinez", "Bob Martines", "Rob Martinezz", "Robbert Marteniz", "Rober Martines"],
+        "Linda Lopez": ["Linda Lopez", "Lynda Lopes", "Lindsey Lopezz", "Lynda Loppes", "Lindah Lopiz"],
+        "James Harris": ["James Harris", "Jim Harriss", "Jamie Harriz", "Jamez Haris", "Jaims Hariss"]
+    }
+
+    cluster_contacts = {
+        "John Smith": ("john.smith@email.com", "555-123-4567"),
+        "Sarah Johnson": ("sarah.j@email.com", "555-987-6543"),
+        "Michael Brown": ("michael.brown@email.com", "555-222-3333"),
+        "Emily Davis": ("emily.davis@email.com", "555-444-5555"),
+        "David Wilson": ("david.w@email.com", "555-666-7777"),
+        "Chris Anderson": ("chris.anderson@email.com", "555-888-9999"),
+        "Amy Clark": ("amy.clark@email.com", "555-111-2222"),
+        "Robert Martinez": ("robert.m@email.com", "555-333-4444"),
+        "Linda Lopez": ("linda.lopez@email.com", "555-555-6666"),
+        "James Harris": ("james.h@email.com", "555-777-8888")
+    }
+
+    first_names = ["Mark", "Daniel", "Rachel", "Kevin", "Laura", "Sophia", "Ethan", "Olivia", "Liam", "Mia"]
+    last_names = ["Taylor", "Moore", "White", "Green", "Hall", "Allen", "Young", "King", "Wright", "Scott"]
+
+    rows = []
+    customer_id = 1
+
+    for base_name, variations in name_variations.items():
+        email, phone = cluster_contacts[base_name]
+        for _ in range(1000):
+            name = random.choice(variations)
+            parts = name.split(" ", 1)
+            first = parts[0]
+            last = parts[1] if len(parts) > 1 else ""
+            rows.append([customer_id, first, last, email, phone])
+            customer_id += 1
+
+    while len(rows) < 10000:
+        first = random.choice(first_names)
+        last = random.choice(last_names)
+        email = f"{first.lower()}.{last.lower()}{random.randint(1,9999)}@email.com"
+        phone = f"555-{random.randint(100,999)}-{random.randint(1000,9999)}"
+        rows.append([customer_id, first, last, email, phone])
+        customer_id += 1
+
+    schema = StructType([
+        StructField("CUSTOMER_ID", IntegerType()),
+        StructField("FIRST_NAME", StringType()),
+        StructField("LAST_NAME", StringType()),
+        StructField("EMAIL", StringType()),
+        StructField("PHONE", StringType())
+    ])
+    
+    df = session.create_dataframe(rows, schema)
+    
+    df.write.mode("overwrite").save_as_table("ER_DEMO.PUBLIC.CUSTOMER")
+    
+    return df
