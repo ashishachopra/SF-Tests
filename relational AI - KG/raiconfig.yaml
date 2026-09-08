@@ -1,0 +1,42 @@
+# raiconfig.yaml — RelationalAI configuration
+# Uncomment and fill in the sections you need.
+
+active_profile: dev
+
+profile:                              # add more profiles (e.g. staging, prod) as needed
+  dev:
+    default_connection: snowflake   # change to: duckdb  or  local
+
+    connections:
+
+      # ── Snowflake ────────────────────────────────────────────────────────────
+      snowflake:
+        type: snowflake
+        account: LZGRIAU-RD51495      # format: <org>-<account>, e.g. acme-prod123
+        warehouse: compute_wh
+        rai_app_name: relationalai    # name of the RAI app in your Snowflake account
+        authenticator: username_password     # other options: username_password_mfa | externalbrowser | jwt | oauth | programmatic_access_token
+        user: ASHISHCHOPRA
+        password: "eyJraWQiOiI3ODMyMzg4MjYyNTAyNDYiLCJhbGciOiJFUzI1NiJ9.eyJwIjoiNDY2ODQ2NzY6MTE5NTEyNzYyOTMiLCJpc3MiOiJTRjoyMDAzIiwiZXhwIjoxODA0ODkwNjQ1fQ.gvnzX5W7cYZA2dILtcR4DeC5IufUJJfhZ37QkPlnhLIXguqA-wlzhLSpxIHK-5i_ZYT15Ma_eDWGHh-OWG6LhQ"     # tip: use env var SNOWFLAKE_PASSWORD instead
+        # role: MY_ROLE               # optional
+        # database: MY_DATABASE       # optional
+        # schema: PUBLIC              # optional
+
+      # ── DuckDB ───────────────────────────────────────────────────────────────
+      # duckdb:
+      #   type: duckdb
+      #   path: ":memory:"            # or a file path, e.g. /tmp/mydb.duckdb
+
+      # ── Local RAI server ─────────────────────────────────────────────────────
+      # local:
+      #   type: local
+      #   host: localhost
+      #   port: 8010
+
+    # ── Reasoners (optional) ─────────────────────────────────────────────────
+    # reasoners:
+    #   logic:
+    #     name: my_reasoner           # reasoner instance name (Snowflake)
+    #     size: HIGHMEM_X64_S         # reasoner size
+    #     auto_suspend_mins: 60       # auto-suspend idle reasoner after N minutes
+    #     await_storage_vacuum: true  # wait for storage vacuum work before suspending

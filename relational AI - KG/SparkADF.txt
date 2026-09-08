@@ -1,0 +1,36 @@
+{
+    "sparkJob": {
+        "referenceName": "spark_job_definition_py",
+        "type": "SparkJobDefinitionReference"
+    },
+    "file": "abfss://ai-jar@t3a01300tst02arg01dl06.dfs.core.windows.net/2.2.0/entrypoint-2.2.0.py",
+    "args": [
+        "--source-path",
+        "abfss://raw@t3a01300tst02arg01dl01.dfs.core.windows.net/day_0_transaction_data_from_creator_hub/year=2025/month=10/day=02",
+        "--target-path",
+        "abfss://staging@t3a01300tst02arg01dl02.dfs.core.windows.net/day_0_transaction_data_release2/year=2025/month=10/day=02"
+    ],
+    "scanFolder": true,
+    "pythonCodeReference": [
+        "abfss://ai-jar@t3a01300tst02arg01dl06.dfs.core.windows.net/2.2.0/transaction_processing-2.2.0.zip"
+    ],
+    "targetBigDataPool": {
+        "referenceName": "synsp01",
+        "type": "BigDataPoolReference"
+    },
+    "executorSize": "Large",
+    "conf": {
+        "spark.dynamicAllocation.enabled": true,
+        "spark.dynamicAllocation.minExecutors": 1,
+        "spark.dynamicAllocation.maxExecutors": 1
+    },
+    "driverSize": "Large",
+    "numExecutors": 1,
+    "configurationType": "Customized",
+    "sparkConfig": {
+        "spark.sql.parquet.int96RebaseModeInWrite": "CORRECTED",
+        "spark.sql.parquet.int96RebaseModeInRead": "CORRECTED",
+        "spark.sql.parquet.datetimeRebaseModeInRead": "CORRECTED",
+        "spark.sql.parquet.datetimeRebaseModeInWrite": "CORRECTED"
+    }
+}
