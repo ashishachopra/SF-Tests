@@ -1,0 +1,17 @@
+https://github.com/Snowflake-Labs/RSnowflake/
+https://dbi.r-dbi.org/
+
+RSnowflake reads and writes via the ADBC Snowflake Go driver (adbcsnowflake). In Workspace Notebooks (SPCS containers), ADBC connects via the internal SPCS gateway using the container's OAuth token -- no PAT, public endpoint, or authentication policy configuration is required.
+
+Workspace container (SPCS)
+  ├── ADBC Go driver ──► internal SPCS gateway ──► Snowflake
+  │     ALL SQL (reads, writes, DDL, metadata) via SNOWFLAKE_HOST
+  │     uses SPCS OAuth token (auth_oauth)
+  │     ** Preferred -- Arrow-native, no public endpoint needed **
+  │
+  ├── REST API v2 ──► internal SPCS gateway ──► Snowflake
+  │     uses Bearer + SPCS OAuth token on SNOWFLAKE_HOST
+  │     ** Used when ADBC not installed -- no public endpoint needed **
+  │
+  └── Snowpark write_pandas ──► internal SPCS gateway ──► Snowflake
+        uses SPCS OAuth token (Snowpark Python client)
