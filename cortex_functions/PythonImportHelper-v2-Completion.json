@@ -1,0 +1,153 @@
+[
+    {
+        "label": "streamlit",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "streamlit",
+        "description": "streamlit",
+        "detail": "streamlit",
+        "documentation": {}
+    },
+    {
+        "label": "altair",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "altair",
+        "description": "altair",
+        "detail": "altair",
+        "documentation": {}
+    },
+    {
+        "label": "pandas",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pandas",
+        "description": "pandas",
+        "detail": "pandas",
+        "documentation": {}
+    },
+    {
+        "label": "get_active_session",
+        "importPath": "snowflake.snowpark.context",
+        "description": "snowflake.snowpark.context",
+        "isExtraImport": true,
+        "detail": "snowflake.snowpark.context",
+        "documentation": {}
+    },
+    {
+        "label": "get_active_session",
+        "importPath": "snowflake.snowpark.context",
+        "description": "snowflake.snowpark.context",
+        "isExtraImport": true,
+        "detail": "snowflake.snowpark.context",
+        "documentation": {}
+    },
+    {
+        "label": "load_data",
+        "kind": 2,
+        "importPath": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "description": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "peekOfCode": "def load_data():\n    query = \"\"\"\n    WITH files AS (\n      SELECT REPLACE(REGEXP_SUBSTR(file_url, '[^/]+$'), '%2e', '.') as filename\n      FROM DIRECTORY('@ER_DEMO.PUBLIC.ML_STAGE')\n      WHERE filename LIKE '%.docx'\n    ),\n    parsed AS (\n      SELECT filename,\n        SNOWFLAKE.CORTEX.PARSE_DOCUMENT(@ER_DEMO.PUBLIC.ML_STAGE, filename, {'mode': 'layout'}):content AS layout",
+        "detail": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "documentation": {}
+    },
+    {
+        "label": "session",
+        "kind": 5,
+        "importPath": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "description": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "peekOfCode": "session = get_active_session()\n@st.cache_data\ndef load_data():\n    query = \"\"\"\n    WITH files AS (\n      SELECT REPLACE(REGEXP_SUBSTR(file_url, '[^/]+$'), '%2e', '.') as filename\n      FROM DIRECTORY('@ER_DEMO.PUBLIC.ML_STAGE')\n      WHERE filename LIKE '%.docx'\n    ),\n    parsed AS (",
+        "detail": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "documentation": {}
+    },
+    {
+        "label": "products",
+        "kind": 5,
+        "importPath": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "description": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "peekOfCode": "products = st.sidebar.multiselect(\"Select Products\", df['PRODUCT'].unique(), default=df['PRODUCT'].unique())\nfiltered_df = df[df['PRODUCT'].isin(products)]\ncol1, col2, col3, col4 = st.columns(4)\ncol1.metric(\"Total Reviews\", len(filtered_df))\ncol2.metric(\"Avg Sentiment\", f\"{filtered_df['SENTIMENT_SCORE'].mean():.2f}\")\ncol3.metric(\"Positive Reviews\", len(filtered_df[filtered_df['SENTIMENT_SCORE'] >= 0]))\ncol4.metric(\"Negative Reviews\", len(filtered_df[filtered_df['SENTIMENT_SCORE'] < 0]))\nst.subheader(\"Sentiment Over Time\")\ntime_chart = alt.Chart(filtered_df).mark_bar(size=15).encode(\n    x=alt.X('DATE:T', axis=alt.Axis(format='%Y-%m-%d', labelAngle=90)),",
+        "detail": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "documentation": {}
+    },
+    {
+        "label": "filtered_df",
+        "kind": 5,
+        "importPath": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "description": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "peekOfCode": "filtered_df = df[df['PRODUCT'].isin(products)]\ncol1, col2, col3, col4 = st.columns(4)\ncol1.metric(\"Total Reviews\", len(filtered_df))\ncol2.metric(\"Avg Sentiment\", f\"{filtered_df['SENTIMENT_SCORE'].mean():.2f}\")\ncol3.metric(\"Positive Reviews\", len(filtered_df[filtered_df['SENTIMENT_SCORE'] >= 0]))\ncol4.metric(\"Negative Reviews\", len(filtered_df[filtered_df['SENTIMENT_SCORE'] < 0]))\nst.subheader(\"Sentiment Over Time\")\ntime_chart = alt.Chart(filtered_df).mark_bar(size=15).encode(\n    x=alt.X('DATE:T', axis=alt.Axis(format='%Y-%m-%d', labelAngle=90)),\n    y=alt.Y('SENTIMENT_SCORE:Q'),",
+        "detail": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "documentation": {}
+    },
+    {
+        "label": "time_chart",
+        "kind": 5,
+        "importPath": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "description": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "peekOfCode": "time_chart = alt.Chart(filtered_df).mark_bar(size=15).encode(\n    x=alt.X('DATE:T', axis=alt.Axis(format='%Y-%m-%d', labelAngle=90)),\n    y=alt.Y('SENTIMENT_SCORE:Q'),\n    color=alt.condition(alt.datum.SENTIMENT_SCORE >= 0, alt.value('#2ecc71'), alt.value('#e74c3c')),\n    tooltip=['PRODUCT:N', 'DATE:T', 'SENTIMENT_SCORE:Q']\n).properties(height=400)\nst.altair_chart(time_chart, use_container_width=True)\nst.subheader(\"Average Sentiment by Product\")\nproduct_chart = alt.Chart(filtered_df).mark_bar().encode(\n    y=alt.Y('PRODUCT:N', sort='-x'),",
+        "detail": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "documentation": {}
+    },
+    {
+        "label": "product_chart",
+        "kind": 5,
+        "importPath": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "description": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "peekOfCode": "product_chart = alt.Chart(filtered_df).mark_bar().encode(\n    y=alt.Y('PRODUCT:N', sort='-x'),\n    x=alt.X('mean(SENTIMENT_SCORE):Q', title='Average Sentiment'),\n    color=alt.condition(alt.datum.mean_SENTIMENT_SCORE >= 0, alt.value('#2ecc71'), alt.value('#e74c3c')),\n    tooltip=['PRODUCT:N', 'mean(SENTIMENT_SCORE):Q', 'count():Q']\n).properties(height=400)\nst.altair_chart(product_chart, use_container_width=True)\nst.subheader(\"Review Details\")\nst.dataframe(filtered_df[['PRODUCT', 'DATE', 'SUMMARY', 'SENTIMENT_SCORE']], use_container_width=True)\nst.download_button(",
+        "detail": "cortex-external-llm.CORTEX Functions - STREAMLIT",
+        "documentation": {}
+    },
+    {
+        "label": "cortex_complete",
+        "kind": 2,
+        "importPath": "cortex-local-llm.cortex-transcribe-streamlit",
+        "description": "cortex-local-llm.cortex-transcribe-streamlit",
+        "peekOfCode": "def cortex_complete(model, prompt):\n    escaped_prompt = prompt.replace(\"'\", \"''\")\n    result = session.sql(f\"SELECT SNOWFLAKE.CORTEX.COMPLETE('{model}', '{escaped_prompt}') AS RESPONSE\").collect()\n    return result[0][\"RESPONSE\"]\ncol1, col2 = st.columns(2)\nwith col1:\n    task = st.selectbox(\"Task\", list(TASKS.keys()))\nwith col2:\n    model = st.selectbox(\"Model\", MODELS)\ntext_input = st.text_area(\"Enter text to process\", height=150)",
+        "detail": "cortex-local-llm.cortex-transcribe-streamlit",
+        "documentation": {}
+    },
+    {
+        "label": "session",
+        "kind": 5,
+        "importPath": "cortex-local-llm.cortex-transcribe-streamlit",
+        "description": "cortex-local-llm.cortex-transcribe-streamlit",
+        "peekOfCode": "session = get_active_session()\nst.title(\"Text Processing with Cortex LLMs\")\nTASKS = {\n    \"Summarize\": \"summarize\",\n    \"Translate to Spanish\": \"translate_es\", \n    \"Translate to French\": \"translate_fr\",\n    \"Sentiment Analysis\": \"sentiment\",\n}\nMODELS = [\"llama3.1-8b\", \"mistral-7b\"]\nPROMPTS = {",
+        "detail": "cortex-local-llm.cortex-transcribe-streamlit",
+        "documentation": {}
+    },
+    {
+        "label": "TASKS",
+        "kind": 5,
+        "importPath": "cortex-local-llm.cortex-transcribe-streamlit",
+        "description": "cortex-local-llm.cortex-transcribe-streamlit",
+        "peekOfCode": "TASKS = {\n    \"Summarize\": \"summarize\",\n    \"Translate to Spanish\": \"translate_es\", \n    \"Translate to French\": \"translate_fr\",\n    \"Sentiment Analysis\": \"sentiment\",\n}\nMODELS = [\"llama3.1-8b\", \"mistral-7b\"]\nPROMPTS = {\n    \"summarize\": \"Summarize concisely:\\n\\n{text}\",\n    \"translate_es\": \"Translate to Spanish:\\n\\n{text}\",",
+        "detail": "cortex-local-llm.cortex-transcribe-streamlit",
+        "documentation": {}
+    },
+    {
+        "label": "MODELS",
+        "kind": 5,
+        "importPath": "cortex-local-llm.cortex-transcribe-streamlit",
+        "description": "cortex-local-llm.cortex-transcribe-streamlit",
+        "peekOfCode": "MODELS = [\"llama3.1-8b\", \"mistral-7b\"]\nPROMPTS = {\n    \"summarize\": \"Summarize concisely:\\n\\n{text}\",\n    \"translate_es\": \"Translate to Spanish:\\n\\n{text}\",\n    \"translate_fr\": \"Translate to French:\\n\\n{text}\",\n    \"sentiment\": \"Analyze sentiment (positive/negative/neutral):\\n\\n{text}\",\n}\ndef cortex_complete(model, prompt):\n    escaped_prompt = prompt.replace(\"'\", \"''\")\n    result = session.sql(f\"SELECT SNOWFLAKE.CORTEX.COMPLETE('{model}', '{escaped_prompt}') AS RESPONSE\").collect()",
+        "detail": "cortex-local-llm.cortex-transcribe-streamlit",
+        "documentation": {}
+    },
+    {
+        "label": "PROMPTS",
+        "kind": 5,
+        "importPath": "cortex-local-llm.cortex-transcribe-streamlit",
+        "description": "cortex-local-llm.cortex-transcribe-streamlit",
+        "peekOfCode": "PROMPTS = {\n    \"summarize\": \"Summarize concisely:\\n\\n{text}\",\n    \"translate_es\": \"Translate to Spanish:\\n\\n{text}\",\n    \"translate_fr\": \"Translate to French:\\n\\n{text}\",\n    \"sentiment\": \"Analyze sentiment (positive/negative/neutral):\\n\\n{text}\",\n}\ndef cortex_complete(model, prompt):\n    escaped_prompt = prompt.replace(\"'\", \"''\")\n    result = session.sql(f\"SELECT SNOWFLAKE.CORTEX.COMPLETE('{model}', '{escaped_prompt}') AS RESPONSE\").collect()\n    return result[0][\"RESPONSE\"]",
+        "detail": "cortex-local-llm.cortex-transcribe-streamlit",
+        "documentation": {}
+    },
+    {
+        "label": "text_input",
+        "kind": 5,
+        "importPath": "cortex-local-llm.cortex-transcribe-streamlit",
+        "description": "cortex-local-llm.cortex-transcribe-streamlit",
+        "peekOfCode": "text_input = st.text_area(\"Enter text to process\", height=150)\nif st.button(\"Process\", type=\"primary\"):\n    if text_input.strip():\n        with st.spinner(\"Processing...\"):\n            task_key = TASKS[task]\n            prompt = PROMPTS[task_key].format(text=text_input)\n            result = cortex_complete(model, prompt)\n        st.subheader(\"Result\")\n        st.success(result)\n    else:",
+        "detail": "cortex-local-llm.cortex-transcribe-streamlit",
+        "documentation": {}
+    }
+]
