@@ -1,0 +1,58 @@
+1. Prepare Snowflake Resources
+Create database, schema, and role for container resources:
+USE ROLE ACCOUNTADMIN;
+CREATE DATABASE container_db;
+CREATE SCHEMA container_schema;
+CREATE ROLE spcs_role;
+
+Create image repository and compute pool:
+CREATE IMAGE REPOSITORY con_repo;
+CREATE COMPUTE POOL compute_pool_1
+MIN_NODES=1 MAX_NODES=1 INSTANCE_FAMILY=CPU_X64_XS AUTO_RESUME=TRUE AUTO_SUSPEND_SECS=120;
+
+Grant permissions to the role:
+GRANT USAGE, MONITOR ON COMPUTE POOL compute_pool_1 TO ROLE spcs_role;
+GRANT READ, WRITE ON IMAGE REPOSITORY con_repo TO ROLE spcs_role;
+
+2. Containerize and Push App
+Create a Dockerfile for Streamlit app:
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt
+RUN pip install -r requirements.txt
+COPY .
+EXPOSE 5000
+CMD ["streamlit", "run", "app.py", "--server.port=5000", "--server.address=0.0.0.0"]
+
+Build and push the image to Snowflake:
+docker build -t streamlit-app:latest
+docker tag streamlit-app:latest <registry_url>/container_db/container_schema/con_repo/streamlit-app:latest
+docker push <registry_url>/container_db/container_schema/con_repo/streamlit-app:latest
+
+3. Create and Run the Service
+Deploy the container as a Snowflake service:
+USE ROLE spcs_role;
+CREATE SERVICE streamlit_app_service
+IN COMPUTE POOL compute_pool_1
+FROM SPECIFICATION $$
+spec:
+containers:
+- name: st-con
+image: /container_db/container_schema/con_repo/streamlit-app:latest
+env:
+APP_PORT: 5000
+endpoints:
+- name: web
+port: 5000
+public: true
+$$ MIN_INSTANCES=1 MAX_INSTANCES=1;
+
+View the public endpoint:
+SHOW ENDPOINTS IN SERVICE streamlit_app_service;
+
+4. Summary
+Use snow spcs image-registry token for secure Docker authentication.
+Monitor logs with: SELECT SYSTEM$GET_SERVICE_LOGS('streamlit_app_service', '0', 'st-con', 100);
+Grant endpoint usage to other roles for access control.
+
+This method ensures Streamlit app runs securely inside Snowflake with enterprise-grade scalability and public access when needed.
